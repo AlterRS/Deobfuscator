@@ -1,20 +1,22 @@
 package alterrs.deob.trans;
 
-import EDU.purdue.cs.bloat.cfg.FlowGraph;
+import EDU.purdue.cs.bloat.editor.MemberRef;
+import EDU.purdue.cs.bloat.editor.NameAndType;
 import EDU.purdue.cs.bloat.editor.Type;
+import EDU.purdue.cs.bloat.tree.CallStaticExpr;
 import EDU.purdue.cs.bloat.tree.ConstantExpr;
-import EDU.purdue.cs.bloat.tree.StoreExpr;
-import EDU.purdue.cs.bloat.tree.TreeVisitor;
+import EDU.purdue.cs.bloat.tree.Expr;
 import alterrs.deob.tree.ClassNode;
 import alterrs.deob.tree.MethodNode;
 import alterrs.deob.util.TreeNodeVisitor;
 
 /**
  *
- * Reverses number obfuscation which uses the
- * euclidean GCD algorithm.
- * Referenced super_'s post on the "Integer obfuscation" discussion.
- * @see http://en.wikipedia.org/wiki/Euclidean_algorithm for var name explanations.
+ * This is used to fix an issue with the ZKM rename tool/JODE decompiler.
+ * Both of those applications do not recognize class literals (i.e java.lang.String.class).
+ * In order to fix this, we simply create calls to Class.forName(String).
+ * A safer way to do this would be to insert a method which encapsulates the call with a try catch,
+ * and invokes said method, but this works for now.
  * @author Shawn D.
  */
 public class ClassLiteralDeobfuscation extends TreeNodeVisitor {
@@ -22,20 +24,24 @@ public class ClassLiteralDeobfuscation extends TreeNodeVisitor {
 	private int count;
 
 	public void onFinish() {
-		System.out.println("Reversed "+count+" encrypted numbers!");
+		System.out.println("Inserted "+count+" calls to Class.forName(java/lang/String) over top of defined class literal constants.");
 	}
 
 	@Override
-	public void visitStoreExpr(ClassNode c, MethodNode m, final StoreExpr expr) {
-		FlowGraph fg = m.graph();
-		Type type = expr.type();
-		fg.visit(new TreeVisitor() {
-			@Override
-			public void visitConstantExpr(final ConstantExpr cst) {
-				if (expr.target().type() == expr.type() && expr.type())
-				System.out.println(expr.target().type());
+	public void visitConstantExpr(ClassNode c, MethodNode m, final ConstantExpr expr) {
+		try {
+			if (expr.value() instanceof Type) {
+				Type typeValue = (Type) expr.value();
+
+				String name = typeValue.toString().replaceAll("/", ".").replaceFirst("L", "").replace(";", "");
+
+				CallStaticExpr forName = new CallStaticExpr(new Expr[] { new ConstantExpr(name, Type.STRING) }, new MemberRef(Type.CLASS, new NameAndType("forName", Type.getType(new Type[] { Type.STRING }, Type.CLASS))), Type.CLASS);
+				expr.replaceWith(forName);
+				count++;
 			}
-		});
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 }

@@ -1,5 +1,5 @@
 classpath "./deps/clientlibs.jar";
-open "output_literal.jar";
+open "output.jar";
 
 	exclude *.client
 	and *.ja

@@ -3,3 +3,7 @@ bin
 .project
 input*.jar
 ChangeLog.txt
+output*
+temp*
+ZKM_log.txt
+ChangeLog.txt

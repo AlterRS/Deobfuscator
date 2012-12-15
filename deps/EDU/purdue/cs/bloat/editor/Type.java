@@ -174,13 +174,13 @@ public class Type {
 	 * Returns a <tt>Type</tt> of a given descriptor. Equals descriptors will
 	 * result in the same <tt>Type</tt>.
 	 */
-	public static Type getType(final String desc) {
+	public static Type getType(String desc) {
 		// It might be the case that we're passed a string already in the
 		// form of a type descriptor. Remove any trailing ';' and leading
 		// 'L'
-		// if(desc.endsWith(";") && desc.startsWith("L")) {
-		// desc = desc.substring(1, desc.length() - 1);
-		// }
+//		if(desc.endsWith(";") && desc.startsWith("L")) {
+//			desc = desc.substring(1, desc.length() - 1);
+//		}
 
 		Type type = (Type) Type.types.get(desc);
 		if (type == null) {
@@ -305,7 +305,7 @@ public class Type {
 			case 1: // Class descriptor
 				t += desc.charAt(i);
 				if (desc.charAt(i) == ';') { // ';' terminates class
-												// descriptor
+					// descriptor
 					types.add(t);
 					t = "";
 					state = 0;
