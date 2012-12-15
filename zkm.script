@@ -1,0 +1,30 @@
+classpath "./deps/clientlibs.jar";
+open "output_literal.jar";
+
+	exclude *.client
+	and *.ja
+	and c*.
+	and c*.*
+	and c*.* *
+	and c*.* *(*)
+	and ja*.
+	and ja*.*
+	and ja*.* *
+	and ja*.* *(*)
+	and j*.
+	and j*.*
+	and j*.* *
+	and j*.* *(*)
+	and n*.
+	and n*.*
+	and n*.* *
+	and n*.* *(*)
+	and a*.
+	and a*.*
+	and a*.* *
+	and a*.* *(*)
+
+	and *.* resolveClass(*);
+
+unobfuscate;
+saveAll archiveCompression=all ".";

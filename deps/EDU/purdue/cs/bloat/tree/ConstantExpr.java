@@ -98,4 +98,8 @@ public class ConstantExpr extends Expr implements LeafExpr {
 	public Object clone() {
 		return copyInto(new ConstantExpr(value, type));
 	}
+
+	public void setValue(Object value) {
+		this.value = value;
+	}
 }
