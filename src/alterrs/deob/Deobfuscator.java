@@ -31,6 +31,7 @@ import alterrs.deob.trans.EuclideanInverseDeobfuscation;
 import alterrs.deob.trans.FieldDeobfuscation;
 import alterrs.deob.trans.HandlerDeobfuscation;
 import alterrs.deob.trans.PrivilageDeobfuscation;
+import alterrs.deob.trans.SimpleArithmeticDeobfuscation;
 import alterrs.deob.trans.TryCatchDeobfuscation;
 import alterrs.deob.util.NodeVisitor;
 
@@ -38,13 +39,14 @@ public class Deobfuscator {
 	private static Application app = null;
 
 	public static final NodeVisitor[] MISC_TRANSFORMERS = new NodeVisitor[] {
-		new HandlerDeobfuscation(), new PrivilageDeobfuscation(),
-		// new MonitorDeobfuscation()
+		new HandlerDeobfuscation(), new PrivilageDeobfuscation()
 	};
 
 	public static final NodeVisitor[] TREE_TRANSFORMERS = new NodeVisitor[] {
-		new ClassLiteralDeobfuscation()}; /*new EuclideanInverseDeobfuscation(), new ControlFlowDeobfuscation(), new TryCatchDeobfuscation(),
-	//	new FieldDeobfuscation(), };*/
+		new EuclideanInverseDeobfuscation(), new ControlFlowDeobfuscation(), new TryCatchDeobfuscation(),
+		new FieldDeobfuscation(), new ClassLiteralDeobfuscation(),
+		new SimpleArithmeticDeobfuscation(),
+	};
 
 	static {
 		MethodEditor.OPT_STACK_2 = true;
@@ -75,7 +77,7 @@ public class Deobfuscator {
 			System.out.println("Application split into " + chunks.length
 					+ " chunks!");
 
-			System.out.print("Applying tree transformers... 0%");
+			System.out.print("Applying tree transformers...\n\t0%");
 			ExecutorService executor = Executors.newFixedThreadPool(Runtime
 					.getRuntime().availableProcessors());
 			for (int i = 0; i < chunks.length; i++) {
@@ -107,20 +109,30 @@ public class Deobfuscator {
 	private static AtomicInteger percent = new AtomicInteger(0);
 	private static double finishedChunks = 0;
 	private static double totalChunks = 0;
+	private static int prints = 0;
 
 	public static void onFinish(Chunk chunk) {
+
 		int p = percent.get();
 		finishedChunks++;
-
 		int p_ = (int) ((finishedChunks / totalChunks) * 100);
+
+		if (++prints == 11) {
+			System.out.println();
+			prints = 0;
+		}
+
 		if (p != p_) {
 			percent.set(p_);
-			System.out.print(" " + p_ + "%");
+
+
+			System.out.print("\t" + p_ + "%");
 
 			if (p_ == 100) {
 				synchronized (lock) {
 					lock.notifyAll();
 				}
+				System.out.println();
 			}
 		}
 	}

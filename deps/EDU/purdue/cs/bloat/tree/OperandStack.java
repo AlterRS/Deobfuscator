@@ -222,6 +222,11 @@ public class OperandStack {
 		height += expr.type().stackHeight();
 		stack.add(expr);
 	}
+	
+	public void push(int index, final Expr expr) {
+		height += expr.type().stackHeight();
+		stack.add(index, expr);
+	}
 
 	/**
 	 * Returns the number of expressions on the stack.

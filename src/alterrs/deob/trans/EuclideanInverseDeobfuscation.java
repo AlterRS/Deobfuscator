@@ -7,7 +7,6 @@ import EDU.purdue.cs.bloat.tree.ArithExpr;
 import EDU.purdue.cs.bloat.tree.ConstantExpr;
 import EDU.purdue.cs.bloat.tree.Expr;
 import EDU.purdue.cs.bloat.tree.FieldExpr;
-import EDU.purdue.cs.bloat.tree.IfStmt;
 import EDU.purdue.cs.bloat.tree.StaticFieldExpr;
 import alterrs.deob.tree.ClassNode;
 import alterrs.deob.tree.MethodNode;

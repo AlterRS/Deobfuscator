@@ -110,6 +110,15 @@ public class MethodEditor implements Opcode {
 				.convertTypes(exceptionTypes));
 	}
 
+	public void clearLocals() {
+		locals.clear();
+		maxLocals = 0;
+	}
+	
+	public int localsSize() {
+		return locals.size();
+	}
+	
 	private static Type[] convertTypes(final Class[] classes) {
 		if (classes == null) {
 			return (null);

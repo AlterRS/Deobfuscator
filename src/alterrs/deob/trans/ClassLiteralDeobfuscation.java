@@ -29,18 +29,14 @@ public class ClassLiteralDeobfuscation extends TreeNodeVisitor {
 
 	@Override
 	public void visitConstantExpr(ClassNode c, MethodNode m, final ConstantExpr expr) {
-		try {
-			if (expr.value() instanceof Type) {
-				Type typeValue = (Type) expr.value();
+		if (expr.value() instanceof Type) {
+			Type typeValue = (Type) expr.value();
 
-				String name = typeValue.toString().replaceAll("/", ".").replaceFirst("L", "").replace(";", "");
+			String name = typeValue.toString().replaceAll("/", ".").replaceFirst("L", "").replace(";", "");
 
-				CallStaticExpr forName = new CallStaticExpr(new Expr[] { new ConstantExpr(name, Type.STRING) }, new MemberRef(Type.CLASS, new NameAndType("forName", Type.getType(new Type[] { Type.STRING }, Type.CLASS))), Type.CLASS);
-				expr.replaceWith(forName);
-				count++;
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
+			CallStaticExpr forName = new CallStaticExpr(new Expr[] { new ConstantExpr(name, Type.STRING) }, new MemberRef(Type.CLASS, new NameAndType("forName", Type.getType(new Type[] { Type.STRING }, Type.CLASS))), Type.CLASS);
+			expr.replaceWith(forName);
+			count++;
 		}
 	}
 
