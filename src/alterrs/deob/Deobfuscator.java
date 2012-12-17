@@ -30,6 +30,7 @@ import alterrs.deob.trans.ControlFlowDeobfuscation;
 import alterrs.deob.trans.EuclideanInverseDeobfuscation;
 import alterrs.deob.trans.FieldDeobfuscation;
 import alterrs.deob.trans.HandlerDeobfuscation;
+import alterrs.deob.trans.MonitorDeobfuscation;
 import alterrs.deob.trans.PrivilageDeobfuscation;
 import alterrs.deob.trans.SimpleArithmeticDeobfuscation;
 import alterrs.deob.trans.TryCatchDeobfuscation;
@@ -38,7 +39,7 @@ import alterrs.deob.util.NodeVisitor;
 public class Deobfuscator {
 	private static Application app = null;
 
-	public static final NodeVisitor[] MISC_TRANSFORMERS = new NodeVisitor[] {
+	public static final NodeVisitor[] MISC_PRE_TRANSFORMERS = new NodeVisitor[] {
 		new HandlerDeobfuscation(), new PrivilageDeobfuscation()
 	};
 
@@ -47,6 +48,11 @@ public class Deobfuscator {
 		new FieldDeobfuscation(), new ClassLiteralDeobfuscation(),
 		new SimpleArithmeticDeobfuscation(),
 	};
+	
+	public static final NodeVisitor[] MISC_POST_TRANSFORMERS = new NodeVisitor[] {
+		new MonitorDeobfuscation()
+	};
+
 
 	static {
 		MethodEditor.OPT_STACK_2 = true;
@@ -61,12 +67,12 @@ public class Deobfuscator {
 			System.out.println("Loaded " + app.size() + " classes!");
 			System.out.println();
 
-			System.out.print("Applying misc transformers...");
-			for (NodeVisitor visitor : MISC_TRANSFORMERS) {
+			System.out.print("Applying misc pre-transformers...");
+			for (NodeVisitor visitor : MISC_PRE_TRANSFORMERS) {
 				app.accept(visitor);
 			}
 			System.out.println(" DONE!");
-			for (NodeVisitor visitor : MISC_TRANSFORMERS) {
+			for (NodeVisitor visitor : MISC_PRE_TRANSFORMERS) {
 				visitor.onFinish();
 			}
 			System.out.println();
@@ -87,8 +93,17 @@ public class Deobfuscator {
 				lock.wait();
 			}
 			System.out.println();
-
 			for (NodeVisitor visitor : TREE_TRANSFORMERS) {
+				visitor.onFinish();
+			}
+			System.out.println();
+			
+			System.out.print("Applying misc post-transformers...");
+			for (NodeVisitor visitor : MISC_POST_TRANSFORMERS) {
+				app.accept(visitor);
+			}
+			System.out.println(" DONE!");
+			for (NodeVisitor visitor : MISC_POST_TRANSFORMERS) {
 				visitor.onFinish();
 			}
 			System.out.println();
