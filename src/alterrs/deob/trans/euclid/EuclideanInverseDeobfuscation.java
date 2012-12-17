@@ -32,7 +32,7 @@ public class EuclideanInverseDeobfuscation extends TreeNodeVisitor {
 	}
 
 	@Override
-	public void visitArithExpr(final ClassNode c, final MethodNode m, final ArithExpr expr) {
+	public synchronized void visitArithExpr(final ClassNode c, final MethodNode m, final ArithExpr expr) {
 		try {
 			boolean left = expr.left() instanceof ConstantExpr && !(expr.right() instanceof ConstantExpr);
 			boolean right = !(expr.left() instanceof ConstantExpr) && expr.right() instanceof ConstantExpr;

@@ -99,7 +99,7 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 	}
 
 	@Override
-	public void visitArithExpr(final ClassNode c, final MethodNode m, final ArithExpr expr) {
+	public synchronized void visitArithExpr(final ClassNode c, final MethodNode m, final ArithExpr expr) {
 		try {
 			if (expr.operation() == ArithExpr.MUL) {
 				boolean left = expr.left() instanceof ConstantExpr && !(expr.right() instanceof ConstantExpr);
@@ -124,9 +124,7 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 							BigInteger quotient = BigInteger.valueOf(val);
 							AtomicBoolean unsafe = new AtomicBoolean(false);
 							
-							synchronized(PAIRS) {
-								PAIRS.put((MemRefExpr) oppSide, decipher(quotient, isLongCst ? 64 : 32, unsafe));
-							}
+							PAIRS.put((MemRefExpr) oppSide, decipher(quotient, isLongCst ? 64 : 32, unsafe));
 						}
 					}
 				}
