@@ -155,17 +155,14 @@ public class Deobfuscator {
 		int p = percent.get();
 		finishedChunks++;
 		int p_ = (int) (((finishedChunks / totalChunks) * 100) / ((double) totalPhases));
-		int pr = prints.get();
-		prints.set(pr + 1);
-		if (pr == 11) {
-			System.out.println();
-			prints.set(0);
-		}
 		
-
 		if (p != p_) {
 			percent.set(p_);
 
+			if (prints.incrementAndGet() == 8) {
+				System.out.println();
+				prints.set(0);
+			}
 
 			System.out.print("\t" + p_ + "%");
 
