@@ -25,9 +25,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.ZipFile;
 
 import EDU.purdue.cs.bloat.editor.MethodEditor;
+import alterrs.deob.trans.ClassLiteralDeobfuscation;
+import alterrs.deob.trans.ControlFlowDeobfuscation;
+import alterrs.deob.trans.FieldDeobfuscation;
 import alterrs.deob.trans.HandlerDeobfuscation;
 import alterrs.deob.trans.MonitorDeobfuscation;
 import alterrs.deob.trans.PrivilageDeobfuscation;
+import alterrs.deob.trans.SimpleArithmeticDeobfuscation;
+import alterrs.deob.trans.TryCatchDeobfuscation;
 import alterrs.deob.trans.euclid.EuclideanInverseDeobfuscation;
 import alterrs.deob.trans.euclid.EuclideanPairIdentifier;
 import alterrs.deob.util.NodeVisitor;
@@ -40,8 +45,8 @@ public class Deobfuscator {
 	};
 
 	public static final NodeVisitor[] TREE_TRANSFORMERS = new NodeVisitor[] {
-		new EuclideanPairIdentifier(), new EuclideanInverseDeobfuscation(),/*new ControlFlowDeobfuscation(), new TryCatchDeobfuscation(),
-		new FieldDeobfuscation(), new ClassLiteralDeobfuscation(), new SimpleArithmeticDeobfuscation(),*/
+		new EuclideanPairIdentifier(), new EuclideanInverseDeobfuscation(),new ControlFlowDeobfuscation(), new TryCatchDeobfuscation(),
+		new FieldDeobfuscation(), new ClassLiteralDeobfuscation(), new SimpleArithmeticDeobfuscation(),
 	};
 	
 	public static final NodeVisitor[] MISC_POST_TRANSFORMERS = new NodeVisitor[] {

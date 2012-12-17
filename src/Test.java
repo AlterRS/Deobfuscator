@@ -4,9 +4,12 @@ public class Test {
 
 	static int a_decoder = 1;
 	public void testArithmetic() {
-		int a = 5;
-		if(a * a_decoder == 5) {
-			System.out.println("cool");
+		int x = 1;
+		int y = 12;
+		int c = -x + y;
+		
+		if (-(c + -x + y) + x - -y - -x + 2 == 12 - -x) {
+			System.out.println("...");
 		}
 		
 	}

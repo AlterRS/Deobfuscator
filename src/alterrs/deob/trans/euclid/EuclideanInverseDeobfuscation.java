@@ -48,11 +48,10 @@ public class EuclideanInverseDeobfuscation extends TreeNodeVisitor {
 						case ArithExpr.MUL:
 							BigInteger product = pair.product();
 							BigInteger quotient = pair.quotient();
+							
+							long val = pair.bits() == 64 ? ((long) cst.value()) : (int) cst.value();
 
-							boolean isLongCst = cst.value() instanceof Long;
-							long val = isLongCst ? ((long) cst.value()) : (int) cst.value();
-
-							if (val == product.longValue() || val == quotient.longValue()) {
+							if (pair.bits() == 32 && ((int) val == product.intValue() || (int) val == quotient.intValue()) || pair.bits() == 64 && (val == product.longValue() || val == quotient.longValue())) {
 								expr.replaceWith((Expr) oppSide.clone());
 								simpleConditions++;
 							} else {
@@ -69,6 +68,13 @@ public class EuclideanInverseDeobfuscation extends TreeNodeVisitor {
 		}
 	}
 
+	/**
+	 * Returns an unfolded constant value for the given base constant.
+	 * @param pair The pair to unfold.
+	 * @param base The base constant that needs unfolding.
+	 * @param oppSide The expression on the opposite side of the base.
+	 * @return an unfolded {@link ConstantExpr}.
+	 */
 	public ConstantExpr unfold(EuclideanNumberPair pair, ConstantExpr base, Expr oppSide) {
 		if (!base.hasParent() || !(((Expr)base).parent() instanceof StoreExpr)) {
 			return null;
