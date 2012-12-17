@@ -1,8 +1,5 @@
 package alterrs.deob.trans;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import EDU.purdue.cs.bloat.tree.ArithExpr;
 import EDU.purdue.cs.bloat.tree.CastExpr;
 import EDU.purdue.cs.bloat.tree.ConstantExpr;
@@ -12,7 +9,6 @@ import EDU.purdue.cs.bloat.tree.LocalExpr;
 import EDU.purdue.cs.bloat.tree.NegExpr;
 import EDU.purdue.cs.bloat.tree.StaticFieldExpr;
 import EDU.purdue.cs.bloat.tree.StoreExpr;
-import EDU.purdue.cs.bloat.tree.ZeroCheckExpr;
 import alterrs.deob.Deobfuscator;
 import alterrs.deob.tree.ClassNode;
 import alterrs.deob.tree.FieldNode;
@@ -41,63 +37,50 @@ public class SimpleArithmeticDeobfuscation extends TreeNodeVisitor {
 	 * Counter fields for result printing.
 	 */
 	private int addLogic, subLogic, negationLogic;
-	/**
-	 * The fixable expressions (non-negated). These are stored here until {@code onFinish} is invoked
-	 * because replacing during visitation causes the thread to slow to a lock.
-	 */
-	private final Map<ArithExpr, Boolean[]> fixable = new HashMap<>();
 
 	@Override
 	public void onFinish() {
-		System.out.println("Collected "+(fixable.size() + negationLogic)+" fixable pieces of arithmetic logic. Iterating...");
-		for (ArithExpr expr : fixable.keySet()) {
-			if (expr.hasParent()) {
-				Boolean[] flags = fixable.get(expr);
-				boolean op_add = flags[0];
-
-				if (op_add) {
-					addLogic++;
-				} else {
-					subLogic++;
-				}
-
-				boolean left = flags[0];
-				expr.replaceWith(new ArithExpr(op_add ? ArithExpr.SUB : ArithExpr.ADD, left ? expr.right() : expr.left(), left ? expr.left() : expr.right(), expr.type()));
-			}
-		}
 		System.out.println("Arithmetic logic corrected: IADD Logic: "+addLogic+", ISUB Logic: "+subLogic+", Negation logic: "+negationLogic);
 	}
 
 	@Override
-	public void visitArithExpr(final ClassNode c, final MethodNode m, final ArithExpr expr) {
+	public synchronized void visitArithExpr(final ClassNode c, final MethodNode m, final ArithExpr expr) {
 		try {
 			boolean isNegatedLeft = expr.left() instanceof NegExpr;
 			boolean isNegated = isNegatedLeft || expr.right() instanceof NegExpr;
-			
+
 			if (expr.hasParent() && expr.left().type().isIntegral() && expr.right().type().isIntegral()) {
-				
+
 				Number leftVal = getValue(expr.left());
 				Number rightVal = getValue(expr.right());
-				
+
 				if (leftVal != null && rightVal != null || isNegated) {
 					boolean isLeft = isNegated ? isNegatedLeft : leftVal.longValue() < 0;
-					
+
 					switch(expr.operation()) {
 					case ArithExpr.ADD:
 					case ArithExpr.SUB:
+						boolean op_add = expr.operation() == ArithExpr.ADD;
 						if (isNegated) {
 							NegExpr negation = (NegExpr) (isNegatedLeft ? expr.left() : expr.right());
-							expr.replaceWith(new ArithExpr(expr.operation() == ArithExpr.ADD ? ArithExpr.SUB : ArithExpr.ADD, isNegatedLeft ? negation.expr() : expr.left(), isNegatedLeft ? expr.right() : negation.expr(), expr.type()));
+							expr.replaceWith(new ArithExpr(op_add ? ArithExpr.SUB : ArithExpr.ADD, isNegatedLeft ? negation.expr() : expr.left(), isNegatedLeft ? expr.right() : negation.expr(), expr.type()));
 							negationLogic++;
 							break;
 						}
-						
+
 						if (isLeft || rightVal.longValue() < 0) {
-							fixable.put(expr, new Boolean[] { expr.operation() == ArithExpr.ADD, isLeft });
+							if (expr.hasParent()) {
+								if (op_add) {
+									addLogic++;
+								} else {
+									subLogic++;
+								}
+								expr.replaceWith(new ArithExpr(op_add ? ArithExpr.SUB : ArithExpr.ADD, isLeft ? expr.right() : expr.left(), isLeft ? expr.left() : expr.right(), expr.type()));
+							}
 						}
 						break;
 					}
-					
+
 				}
 			}
 		} catch (Exception e) {
@@ -137,12 +120,12 @@ public class SimpleArithmeticDeobfuscation extends TreeNodeVisitor {
 		}
 		if (expr instanceof ArithExpr) {
 			ArithExpr arith = (ArithExpr) expr;
-			
+
 			Number lv = getValue(arith.left());
 			if (lv != null && lv.longValue() < 0) {
 				return lv;
 			}
-			
+
 			Number rv = getValue(arith.right());
 			if (rv != null && rv.longValue() < 0) {
 				return rv;

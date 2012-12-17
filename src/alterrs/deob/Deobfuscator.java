@@ -25,14 +25,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.ZipFile;
 
 import EDU.purdue.cs.bloat.editor.MethodEditor;
-import alterrs.deob.trans.ClassLiteralDeobfuscation;
-import alterrs.deob.trans.ControlFlowDeobfuscation;
-import alterrs.deob.trans.EuclideanInverseDeobfuscation;
-import alterrs.deob.trans.FieldDeobfuscation;
 import alterrs.deob.trans.HandlerDeobfuscation;
 import alterrs.deob.trans.PrivilageDeobfuscation;
-import alterrs.deob.trans.SimpleArithmeticDeobfuscation;
-import alterrs.deob.trans.TryCatchDeobfuscation;
+import alterrs.deob.trans.euclid.EuclideanInverseDeobfuscation;
+import alterrs.deob.trans.euclid.EuclideanPairIdentifier;
 import alterrs.deob.util.NodeVisitor;
 
 public class Deobfuscator {
@@ -43,8 +39,8 @@ public class Deobfuscator {
 	};
 
 	public static final NodeVisitor[] TREE_TRANSFORMERS = new NodeVisitor[] {
-		new EuclideanInverseDeobfuscation(), new ControlFlowDeobfuscation(), new TryCatchDeobfuscation(),
-		new FieldDeobfuscation(), new ClassLiteralDeobfuscation(), new SimpleArithmeticDeobfuscation(),
+		new EuclideanPairIdentifier(), new EuclideanInverseDeobfuscation(),/*new ControlFlowDeobfuscation(), new TryCatchDeobfuscation(),
+		new FieldDeobfuscation(), new ClassLiteralDeobfuscation(), new SimpleArithmeticDeobfuscation(),*/
 	};
 
 	static {
@@ -110,18 +106,20 @@ public class Deobfuscator {
 	private static AtomicInteger percent = new AtomicInteger(0);
 	private static double finishedChunks = 0;
 	private static double totalChunks = 0;
-	private static int prints = 0;
+	private static AtomicInteger prints = new AtomicInteger(0);
 
 	public static void onFinish(Chunk chunk) {
 
 		int p = percent.get();
 		finishedChunks++;
 		int p_ = (int) ((finishedChunks / totalChunks) * 100);
-
-		if (++prints == 11) {
+		int pr = prints.get();
+		prints.set(pr + 1);
+		if (pr == 11) {
 			System.out.println();
-			prints = 0;
+			prints.set(0);
 		}
+		
 
 		if (p != p_) {
 			percent.set(p_);
