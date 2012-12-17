@@ -57,6 +57,19 @@ public class Application {
 		}
 	}
 
+	/**
+	 * Loads a single class file.
+	 * @param classFile
+	 * @throws ClassNotFoundException 
+	 */
+	public Application(String classFile) throws ClassNotFoundException {
+		loader = new ClassFileLoader();
+		context = new PersistentBloatContext(loader);
+		
+		ClassInfo info = loader.loadClass(classFile);
+		classes = new ClassNode[] { new ClassNode(info, context.editClass(info)) };
+	}
+	
 	public BloatContext context() {
 		return context;
 	}

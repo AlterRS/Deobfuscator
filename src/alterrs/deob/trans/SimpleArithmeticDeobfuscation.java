@@ -4,11 +4,18 @@ import java.util.HashMap;
 import java.util.Map;
 
 import EDU.purdue.cs.bloat.tree.ArithExpr;
+import EDU.purdue.cs.bloat.tree.CastExpr;
 import EDU.purdue.cs.bloat.tree.ConstantExpr;
 import EDU.purdue.cs.bloat.tree.Expr;
+import EDU.purdue.cs.bloat.tree.FieldExpr;
 import EDU.purdue.cs.bloat.tree.LocalExpr;
 import EDU.purdue.cs.bloat.tree.NegExpr;
+import EDU.purdue.cs.bloat.tree.StaticFieldExpr;
+import EDU.purdue.cs.bloat.tree.StoreExpr;
+import EDU.purdue.cs.bloat.tree.ZeroCheckExpr;
+import alterrs.deob.Deobfuscator;
 import alterrs.deob.tree.ClassNode;
+import alterrs.deob.tree.FieldNode;
 import alterrs.deob.tree.MethodNode;
 import alterrs.deob.util.TreeNodeVisitor;
 
@@ -68,6 +75,7 @@ public class SimpleArithmeticDeobfuscation extends TreeNodeVisitor {
 			boolean isNegated = isNegatedLeft || expr.right() instanceof NegExpr;
 			
 			if (expr.hasParent() && expr.left().type().isIntegral() && expr.right().type().isIntegral()) {
+				
 				Number leftVal = getValue(expr.left());
 				Number rightVal = getValue(expr.right());
 				
@@ -79,7 +87,6 @@ public class SimpleArithmeticDeobfuscation extends TreeNodeVisitor {
 					case ArithExpr.SUB:
 						if (isNegated) {
 							NegExpr negation = (NegExpr) (isNegatedLeft ? expr.left() : expr.right());
-							
 							expr.replaceWith(new ArithExpr(expr.operation() == ArithExpr.ADD ? ArithExpr.SUB : ArithExpr.ADD, isNegatedLeft ? negation.expr() : expr.left(), isNegatedLeft ? expr.right() : negation.expr(), expr.type()));
 							negationLogic++;
 							break;
@@ -105,36 +112,41 @@ public class SimpleArithmeticDeobfuscation extends TreeNodeVisitor {
 	 * @return The number value.
 	 */
 	public static final Number getValue(Expr expr) {
+		if (expr instanceof NegExpr) {
+			return getValue(((NegExpr) expr).expr());
+		}
 		if (expr instanceof LocalExpr) {
 			return ((LocalExpr) expr).index();
 		}
+		if (expr instanceof StoreExpr) {
+			return getValue(((StoreExpr) expr).expr());
+		}
+		if (expr instanceof CastExpr) {
+			return getValue(((CastExpr) expr).expr());
+		}
+		if (expr instanceof ConstantExpr) {
+			return (Number) ((ConstantExpr) expr).value();
+		}
+		if (expr instanceof FieldExpr) {
+			FieldNode fn = Deobfuscator.getApp().field(((FieldExpr) expr).field());
+			return fn != null ? fn.info.constantValue() : null;
+		}
+		if (expr instanceof StaticFieldExpr) {
+			FieldNode fn = Deobfuscator.getApp().field(((StaticFieldExpr) expr).field());
+			return fn != null ? fn.info.constantValue() : null;
+		}
 		if (expr instanceof ArithExpr) {
 			ArithExpr arith = (ArithExpr) expr;
-
+			
 			Number lv = getValue(arith.left());
 			if (lv != null && lv.longValue() < 0) {
 				return lv;
 			}
+			
 			Number rv = getValue(arith.right());
 			if (rv != null && rv.longValue() < 0) {
 				return rv;
 			}
-		}
-		if (expr instanceof ConstantExpr) {
-			ConstantExpr cst = (ConstantExpr) expr;
-			if (cst.value() instanceof Long) {
-				return null;
-			}
-			if (cst.value() instanceof Float) {
-				return (float) cst.value();
-			}
-			if (cst.value() instanceof Double) {
-				return (double) cst.value();
-			}
-			if (cst.value() instanceof Byte) {
-				return (byte) cst.value();
-			}
-			return (int) cst.value();
 		}
 		return null;
 	}
