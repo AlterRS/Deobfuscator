@@ -50,13 +50,25 @@ public class CompleteSynchronized {
 		if (!(monenter instanceof MonitorEnterOperator))
 			return false;
 
+//		Expression storeExpr = ((MonitorEnterOperator) monenter)
+//				.getSubExpressions()[0];
+		
+//		if (!(storeExpr instanceof StoreInstruction)) {
+//			return false;
+//		}
+//		StoreInstruction store = (StoreInstruction) storeExpr;
+//		LocalStoreOperator local = (LocalStoreOperator) store.getSubExpressions()[0];
+//		if (local.getLocalInfo() != synBlock.local.getLocalInfo()) {
+//			return false;
+//		}
+
 		Expression loadOp = ((MonitorEnterOperator) monenter)
 				.getSubExpressions()[0];
-
 		if (!(loadOp instanceof LocalLoadOperator)
 				|| (((LocalLoadOperator) loadOp).getLocalInfo() != synBlock.local
-						.getLocalInfo()))
+						.getLocalInfo())) {
 			return false;
+		}
 
 		if (GlobalOptions.verboseLevel > 0)
 			GlobalOptions.err.print('s');
@@ -76,7 +88,7 @@ public class CompleteSynchronized {
 	 */
 	public static boolean combineObject(SynchronizedBlock synBlock,
 			StructuredBlock last) {
-
+		
 		/* Is there another expression? */
 		if (!(last.outer instanceof SequentialBlock))
 			return false;
@@ -101,6 +113,6 @@ public class CompleteSynchronized {
 		synBlock.object = assign.getSubExpressions()[1];
 		synBlock.moveDefinitions(last.outer, last);
 		last.replace(last.outer);
-		return true;
+		return false;
 	}
 }

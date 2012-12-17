@@ -45,8 +45,7 @@ public class Deobfuscator {
 
 	public static final NodeVisitor[] TREE_TRANSFORMERS = new NodeVisitor[] {
 		new EuclideanInverseDeobfuscation(), new ControlFlowDeobfuscation(), new TryCatchDeobfuscation(),
-		new FieldDeobfuscation(), new ClassLiteralDeobfuscation(),
-		new SimpleArithmeticDeobfuscation(),
+		new FieldDeobfuscation(), new ClassLiteralDeobfuscation(), new SimpleArithmeticDeobfuscation(),
 	};
 	
 	public static final NodeVisitor[] MISC_POST_TRANSFORMERS = new NodeVisitor[] {
@@ -64,6 +63,7 @@ public class Deobfuscator {
 		try {
 			System.out.println("Loading application... [" + args[0] + "]");
 			app = new Application(new ZipFile(args[0]));
+			//app = new Application("./bin/Test.class");
 			System.out.println("Loaded " + app.size() + " classes!");
 			System.out.println();
 
@@ -115,6 +115,7 @@ public class Deobfuscator {
 			System.out.println("DONE!");
 
 			executor.shutdownNow();
+			Runtime.getRuntime().exec("java -jar deps/proguard.jar deps/@opt.pro");
 		} catch (Throwable t) {
 			System.err.println("Failed to run deobfuscator!");
 			t.printStackTrace();
