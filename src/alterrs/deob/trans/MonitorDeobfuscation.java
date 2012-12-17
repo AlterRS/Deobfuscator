@@ -18,6 +18,42 @@
  */
 package alterrs.deob.trans;
 
-public class MonitorDeobfuscator {
+import EDU.purdue.cs.bloat.editor.Instruction;
+import EDU.purdue.cs.bloat.editor.MethodEditor;
+import alterrs.deob.tree.ClassNode;
+import alterrs.deob.tree.MethodNode;
+import alterrs.deob.util.InsnNodeVisitor;
 
+import static EDU.purdue.cs.bloat.editor.Instruction.*;
+
+public class MonitorDeobfuscation extends InsnNodeVisitor {
+	public int count = 0;
+	
+	@Override
+	public void visitInsn(ClassNode c, MethodNode m, Instruction monitor) {
+		if(monitor.opcodeClass() == opc_monitorenter) {
+			MethodEditor e = m.editor();
+
+			Instruction astore = prev(m, monitor);
+			if(astore == null) 
+				return;
+			
+			Instruction dup = prev(m, astore);
+			if(dup == null)
+				return;
+			
+			if(astore.opcodeClass() == opc_astore && dup.opcodeClass() == opc_dup) {
+				e.code().remove(astore);
+				e.replaceCodeAt(astore, e.code().indexOf(dup));
+				e.insertCodeAt(new Instruction(opc_aload, astore.operand()), e.code().indexOf(astore) + 1);
+				
+				count++;
+			}
+		}
+	}
+	
+	@Override
+	public void onFinish() {
+		System.out.println("Transformed " + count + " monitorenters!");
+	}
 }
