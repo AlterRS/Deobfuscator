@@ -21,7 +21,6 @@ package alterrs.deob;
 import java.io.File;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.ZipFile;
 
 import EDU.purdue.cs.bloat.editor.MethodEditor;
@@ -31,11 +30,9 @@ import alterrs.deob.trans.FieldDeobfuscation;
 import alterrs.deob.trans.HandlerDeobfuscation;
 import alterrs.deob.trans.MonitorDeobfuscation;
 import alterrs.deob.trans.PrivilageDeobfuscation;
-import alterrs.deob.trans.SimpleArithmeticDeobfuscation;
 import alterrs.deob.trans.TryCatchDeobfuscation;
 import alterrs.deob.trans.euclid.EuclideanInverseDeobfuscation;
 import alterrs.deob.trans.euclid.EuclideanPairIdentifier;
-import alterrs.deob.util.FileUtilities;
 import alterrs.deob.util.NodeVisitor;
 
 public class Deobfuscator {
@@ -51,7 +48,7 @@ public class Deobfuscator {
 			new ControlFlowDeobfuscation(), 
 			new TryCatchDeobfuscation(),
 			new FieldDeobfuscation(), 
-			//new ClassLiteralDeobfuscation(), 
+			new ClassLiteralDeobfuscation(), 
 			//new SimpleArithmeticDeobfuscation(),
 		},
 		
@@ -100,27 +97,29 @@ public class Deobfuscator {
 			ExecutorService executor = Executors.newFixedThreadPool(Runtime
 					.getRuntime().availableProcessors());
 			for(; phase < totalPhases; phase++) {
-				System.out.println("^ Applying phase " + (phase + 1) + "...");
+				int realPhase = phase + 1;
+				System.out.println("\n^ Applying phase " + realPhase + "...\n");
 				
-				Chunk[] chunks = app.split(32 * Runtime.getRuntime()
-						.availableProcessors());
+				Chunk[] chunks = app.split(32 * Runtime.getRuntime() .availableProcessors());
 				totalChunks = chunks.length;
 				for (int i = 0; i < chunks.length; i++) {
 					executor.submit(chunks[i]);
 				}
+				
+				System.out.println("Application split into "+chunks.length+" chunks!\n");
 				
 				synchronized (lock) {
 					lock.wait();
 				}
 				
 				if(phase != (totalPhases - 1)) {
+					System.out.println("\n\n> Phase "+realPhase+" completed. Reloading classes to free memory and regraph.");
 					File temp = app.tempSave();
 					app = new Application(new ZipFile(temp));
 					temp.deleteOnExit();
 				}
 				
 				System.gc();
-				System.out.println();
 			}
 			System.out.println();
 			for (NodeVisitor[] visitors : TREE_TRANSFORMERS) {
@@ -147,7 +146,6 @@ public class Deobfuscator {
 			System.out.println("DONE!");
 
 			executor.shutdownNow();
-			Runtime.getRuntime().exec("java -jar deps/proguard.jar deps/@opt.pro");
 		} catch (Throwable t) {
 			System.err.println("Failed to run deobfuscator!");
 			t.printStackTrace();

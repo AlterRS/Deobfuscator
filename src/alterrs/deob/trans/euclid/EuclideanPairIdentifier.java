@@ -5,14 +5,16 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import EDU.purdue.cs.bloat.editor.MemberRef;
 import EDU.purdue.cs.bloat.tree.ArithExpr;
+import EDU.purdue.cs.bloat.tree.ArrayRefExpr;
 import EDU.purdue.cs.bloat.tree.CallMethodExpr;
 import EDU.purdue.cs.bloat.tree.CallStaticExpr;
 import EDU.purdue.cs.bloat.tree.ConstantExpr;
 import EDU.purdue.cs.bloat.tree.Expr;
 import EDU.purdue.cs.bloat.tree.FieldExpr;
 import EDU.purdue.cs.bloat.tree.IfCmpStmt;
-import EDU.purdue.cs.bloat.tree.MemRefExpr;
+import EDU.purdue.cs.bloat.tree.NewArrayExpr;
 import EDU.purdue.cs.bloat.tree.Node;
 import EDU.purdue.cs.bloat.tree.StaticFieldExpr;
 import alterrs.deob.tree.ClassNode;
@@ -33,7 +35,7 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 	/**
 	 * The place we store 
 	 */
-	public static final Map<MemRefExpr, EuclideanNumberPair> PAIRS = new HashMap<>();
+	public static final Map<MemberRef, EuclideanNumberPair> PAIRS = new HashMap<>();
 	
 	public void onFinish() {
 		int unsafe = 0;
@@ -96,6 +98,10 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 		public int bits() {
 			return bits;
 		}
+
+		public boolean isUnsafe() {
+			return unsafe;
+		}
 	}
 
 	@Override
@@ -109,11 +115,14 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 					Expr oppSide = left ? expr.right() : expr.left();
 					ConstantExpr cst = (ConstantExpr) (left ? expr.left() : expr.right());
 
-					if (cst.type().isIntegral() && oppSide instanceof FieldExpr || oppSide instanceof StaticFieldExpr) {
+					boolean isStaticOpp = oppSide instanceof StaticFieldExpr;
+					if (cst.type().isIntegral() && oppSide instanceof FieldExpr || isStaticOpp) {
 						Node parent = expr.parent();
-						if (parent instanceof IfCmpStmt || parent instanceof CallMethodExpr || parent instanceof CallStaticExpr) {// 
+						if (parent instanceof IfCmpStmt || parent instanceof CallMethodExpr || parent instanceof CallStaticExpr || parent instanceof NewArrayExpr || parent instanceof ArrayRefExpr || parent instanceof ArithExpr) { 
 							// If the above condition is satisfied, we know the number is being used and not stored,
 							// therefore, we've found a quotient number.
+							// Improving this statement will improve the amount of pairs found, therefore increasing the overall
+							// results of the phase 2 transformer. We mark this as a TODO .
 							boolean isLongCst = cst.value() instanceof Long;
 							long val = isLongCst ? ((long) cst.value()) : (int) cst.value();
 							
@@ -124,7 +133,17 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 							BigInteger quotient = BigInteger.valueOf(val);
 							AtomicBoolean unsafe = new AtomicBoolean(false);
 							
-							PAIRS.put((MemRefExpr) oppSide, decipher(quotient, isLongCst ? 64 : 32, unsafe));
+							EuclideanNumberPair pair = decipher(quotient, isLongCst ? 64 : 32, unsafe);
+							
+							
+							MemberRef field =  isStaticOpp ? ((StaticFieldExpr) oppSide).field() : ((FieldExpr) oppSide).field();
+							EuclideanNumberPair prev = PAIRS.get(field);
+							
+							if (prev != null) {
+								return;
+							}
+							
+							PAIRS.put(field, pair);
 						}
 					}
 				}
