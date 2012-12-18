@@ -43,7 +43,7 @@ public class Chunk implements Runnable {
 				m.graph();
 			}
 		});
-		for (NodeVisitor visitor : Deobfuscator.TREE_TRANSFORMERS) {
+		for (NodeVisitor visitor : Deobfuscator.TREE_TRANSFORMERS[Deobfuscator.getPhase()]) {
 			accept(visitor);
 		}
 		accept(new NodeVisitor() {

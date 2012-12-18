@@ -25,9 +25,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.ZipFile;
 
 import EDU.purdue.cs.bloat.editor.MethodEditor;
+import alterrs.deob.trans.ClassLiteralDeobfuscation;
+import alterrs.deob.trans.ControlFlowDeobfuscation;
+import alterrs.deob.trans.FieldDeobfuscation;
 import alterrs.deob.trans.HandlerDeobfuscation;
 import alterrs.deob.trans.MonitorDeobfuscation;
 import alterrs.deob.trans.PrivilageDeobfuscation;
+import alterrs.deob.trans.SimpleArithmeticDeobfuscation;
+import alterrs.deob.trans.TryCatchDeobfuscation;
 import alterrs.deob.trans.euclid.EuclideanInverseDeobfuscation;
 import alterrs.deob.trans.euclid.EuclideanPairIdentifier;
 import alterrs.deob.util.NodeVisitor;
@@ -39,9 +44,19 @@ public class Deobfuscator {
 		new HandlerDeobfuscation(), new PrivilageDeobfuscation()
 	};
 
-	public static final NodeVisitor[] TREE_TRANSFORMERS = new NodeVisitor[] {
-		new EuclideanPairIdentifier(), new EuclideanInverseDeobfuscation(),/*new ControlFlowDeobfuscation(), new TryCatchDeobfuscation(),
-		new FieldDeobfuscation(), new ClassLiteralDeobfuscation(), new SimpleArithmeticDeobfuscation(),*/
+	public static final NodeVisitor[][] TREE_TRANSFORMERS = new NodeVisitor[][] { 
+		{ // Phase 1
+			new EuclideanPairIdentifier(), 
+			new ControlFlowDeobfuscation(), 
+			new TryCatchDeobfuscation(),
+			new FieldDeobfuscation(), 
+			new ClassLiteralDeobfuscation(), 
+			new SimpleArithmeticDeobfuscation(),
+		},
+		
+		{ // Phase 2
+			new EuclideanInverseDeobfuscation(), 
+		}
 	};
 	
 	public static final NodeVisitor[] MISC_POST_TRANSFORMERS = new NodeVisitor[] {
@@ -54,6 +69,8 @@ public class Deobfuscator {
 	}
 
 	private static Object lock = new Object();
+	private static int phase = 0;
+	private static final int totalPhases = TREE_TRANSFORMERS.length;
 
 	public static void main(String[] args) {
 		try {
@@ -79,18 +96,24 @@ public class Deobfuscator {
 			System.out.println("Application split into " + chunks.length
 					+ " chunks!");
 
+			System.out.println("Executing a total of " + totalPhases + " phases!");
 			System.out.print("Applying tree transformers...\n\t0%");
 			ExecutorService executor = Executors.newFixedThreadPool(Runtime
 					.getRuntime().availableProcessors());
-			for (int i = 0; i < chunks.length; i++) {
-				executor.submit(chunks[i]);
-			}
-			synchronized (lock) {
-				lock.wait();
+			for(; phase < totalPhases; phase++) {
+				for (int i = 0; i < chunks.length; i++) {
+					executor.submit(chunks[i]);
+				}
+				
+				synchronized (lock) {
+					lock.wait();
+				}
 			}
 			System.out.println();
-			for (NodeVisitor visitor : TREE_TRANSFORMERS) {
-				visitor.onFinish();
+			for (NodeVisitor[] visitors : TREE_TRANSFORMERS) {
+				for(NodeVisitor visitor : visitors) {
+					visitor.onFinish();
+				}
 			}
 			System.out.println();
 			
@@ -117,6 +140,10 @@ public class Deobfuscator {
 			t.printStackTrace();
 		}
 	}
+	
+	public static int getPhase() {
+		return phase;
+	}
 
 	private static AtomicInteger percent = new AtomicInteger(0);
 	private static double finishedChunks = 0;
@@ -127,7 +154,7 @@ public class Deobfuscator {
 
 		int p = percent.get();
 		finishedChunks++;
-		int p_ = (int) ((finishedChunks / totalChunks) * 100);
+		int p_ = (int) (((finishedChunks / totalChunks) * 100) / ((double) totalPhases));
 		int pr = prints.get();
 		prints.set(pr + 1);
 		if (pr == 11) {
@@ -142,11 +169,15 @@ public class Deobfuscator {
 
 			System.out.print("\t" + p_ + "%");
 
-			if (p_ == 100) {
+			if (finishedChunks == totalChunks) {
 				synchronized (lock) {
 					lock.notifyAll();
 				}
-				System.out.println();
+				
+				if(p_ == 100)
+					System.out.println();
+				
+				finishedChunks = 0;
 			}
 		}
 	}

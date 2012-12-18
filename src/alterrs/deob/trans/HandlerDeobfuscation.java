@@ -18,6 +18,7 @@
  */
 package alterrs.deob.trans;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -32,14 +33,15 @@ import alterrs.deob.tree.MethodNode;
 import alterrs.deob.util.NodeVisitor;
 
 public class HandlerDeobfuscation extends NodeVisitor {
-	public int count = 0;
+	public int count, count2 = 0;
 	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	public void visitMethod(ClassNode c, MethodNode m) {
 		MethodEditor e = m.editor();
 		
 		Map<Integer, List<TryCatch>> tryCatchPositions = new HashMap<>();
-		for(Object tco : e.tryCatches()) {
+		for(Object tco : new ArrayList(e.tryCatches())) {
 			TryCatch tc = (TryCatch) tco;
 			
 			int handlerPos = e.code().indexOf(tc.handler());
@@ -50,6 +52,14 @@ public class HandlerDeobfuscation extends NodeVisitor {
 				tryCatchPositions.put(handlerPos, handlers);
 			} else {
 				tryCatchPositions.get(handlerPos).add(tc);
+			}
+			
+			if(tc.type() != null && tc.type().equals(Type.getType(Object.class))) {
+				e.tryCatches().remove(tc);
+				e.addTryCatch(new TryCatch(tc.start(), tc.end(), tc.handler(), Type.getType(Throwable.class)));
+				count2++;
+			} else {
+				//System.out.println
 			}
 		}
 		
@@ -86,5 +96,6 @@ public class HandlerDeobfuscation extends NodeVisitor {
 	@Override
 	public void onFinish() {
 		System.out.println("Reorganized " + count + " handler tables!");
+		System.out.println("Fixed " + count2 + " handler types!");
 	}
 }
