@@ -51,7 +51,7 @@ public class Deobfuscator {
 			new TryCatchDeobfuscation(),
 			new FieldDeobfuscation(), 
 			new ClassLiteralDeobfuscation(), 
-			new SimpleArithmeticDeobfuscation(),
+			//new SimpleArithmeticDeobfuscation(),
 		},
 		
 		{ // Phase 2
@@ -154,7 +154,7 @@ public class Deobfuscator {
 
 		int p = percent.get();
 		finishedChunks++;
-		int p_ = (int) (((finishedChunks / totalChunks) * 100) / ((double) totalPhases));
+		int p_ = (int) (((finishedChunks / totalChunks) * 100) / ((double) totalPhases)) + ((100 / totalPhases) * phase);
 		
 		if (p != p_) {
 			percent.set(p_);
