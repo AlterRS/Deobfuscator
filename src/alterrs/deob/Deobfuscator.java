@@ -43,7 +43,7 @@ public class Deobfuscator {
 	public static final NodeVisitor[] MISC_PRE_TRANSFORMERS = new NodeVisitor[] {
 		new HandlerDeobfuscation(), new PrivilageDeobfuscation()
 	};
-
+	
 	public static final NodeVisitor[][] TREE_TRANSFORMERS = new NodeVisitor[][] { 
 		{ // Phase 1
 			new EuclideanPairIdentifier(), 

@@ -99,7 +99,7 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 	}
 
 	@Override
-	public void visitArithExpr(final ClassNode c, final MethodNode m, final ArithExpr expr) {
+	public synchronized void visitArithExpr(final ClassNode c, final MethodNode m, final ArithExpr expr) {
 		try {
 			if (expr.operation() == ArithExpr.MUL) {
 				boolean left = expr.left() instanceof ConstantExpr && !(expr.right() instanceof ConstantExpr);
@@ -124,9 +124,7 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 							BigInteger quotient = BigInteger.valueOf(val);
 							AtomicBoolean unsafe = new AtomicBoolean(false);
 							
-							synchronized(PAIRS) {
-								PAIRS.put((MemRefExpr) oppSide, decipher(quotient, isLongCst ? 64 : 32, unsafe));
-							}
+							PAIRS.put((MemRefExpr) oppSide, decipher(quotient, isLongCst ? 64 : 32, unsafe));
 						}
 					}
 				}
@@ -144,7 +142,7 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 	 * @return a new {@link EuclideanNumberPair}.
 	 */
 	public static final EuclideanNumberPair decipher(BigInteger quotient, int bits, AtomicBoolean unsafe) {
-		BigInteger product = inverse(quotient);
+		BigInteger product = inverse(quotient, bits);
 		BigInteger g = gcd(product, quotient);
 
 		if (g.longValue() != 1) {// Double check common divisor
@@ -166,8 +164,8 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 	 * and inverses the value (^-1).
 	 * @param val The value to inverse.
 	 */
-	public static BigInteger inverse(BigInteger val) {
-		BigInteger shift = BigInteger.ONE.shiftLeft(32);
+	public static BigInteger inverse(BigInteger val, int bits) {
+		BigInteger shift = BigInteger.ONE.shiftLeft(bits);
 		return val.modInverse(shift);
 	}
 
