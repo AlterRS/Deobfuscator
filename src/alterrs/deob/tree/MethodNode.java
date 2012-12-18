@@ -136,15 +136,13 @@ public class MethodNode {
 			CodeGenerator codegen = new CodeGenerator(editor);
 
 			codegen = new CodeGenerator(editor);
+			
 			codegen.replacePhis(graph);
 			codegen.simplifyControlFlow(graph);
 			
 			editor.clearCode();
 			graph.visit(codegen);
-			
-			//final StackOpt so = new StackOpt();
-			//so.transform(editor);
-			
+
 			graph = null;
 			graphInUse = false;
 		}

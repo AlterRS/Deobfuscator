@@ -54,13 +54,13 @@ public class HandlerDeobfuscation extends NodeVisitor {
 				tryCatchPositions.get(handlerPos).add(tc);
 			}
 			
-			if(tc.type() != null && tc.type().equals(Type.getType(Object.class))) {
+			/* if(tc.type() != null && tc.type().equals(Type.getType(Object.class))) {
 				e.tryCatches().remove(tc);
 				e.addTryCatch(new TryCatch(tc.start(), tc.end(), tc.handler(), Type.getType(Throwable.class)));
 				count2++;
 			} else {
 				//System.out.println
-			}
+			} */
 		}
 		
 		for (Map.Entry<Integer, List<TryCatch>> entry : tryCatchPositions
@@ -96,6 +96,6 @@ public class HandlerDeobfuscation extends NodeVisitor {
 	@Override
 	public void onFinish() {
 		System.out.println("Reorganized " + count + " handler tables!");
-		System.out.println("Fixed " + count2 + " handler types!");
+		// System.out.println("Fixed " + count2 + " handler types!");
 	}
 }

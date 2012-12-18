@@ -77,20 +77,6 @@ public class ControlFlowDeobfuscation extends TreeNodeVisitor {
 			
 			@Override
 			public void visitReturnStmt(ReturnStmt r) {
-				Number value = (Number) ldc.value();
-				if(value instanceof Integer) {
-					int v = value.intValue();
-					if((Math.abs(v) & 0xffffff) == Math.abs(v)) {
-						//return;
-					}
-					
-				} else if(value instanceof Long) {
-					long v = value.longValue();
-					if((Math.abs(v)  & 0xffffffffL) == Math.abs(v)) {
-						//return;
-					}
-				}
-				
 				flag.set(true);
 			}
 			
@@ -128,7 +114,9 @@ public class ControlFlowDeobfuscation extends TreeNodeVisitor {
 							Block t = cmp.trueTarget();
 							Block f = cmp.falseTarget();
 							
+							//m.graph().removeNode(cmp.block().label());
 							cmp.replaceWith(new GotoStmt(t));
+							//cmp.block().tree().removeStmt(cmp);
 							if(t != f) {
 								m.graph().removeNode(f.label());
 							}

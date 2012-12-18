@@ -37,21 +37,27 @@ public class Chunk implements Runnable {
 
 	@Override
 	public void run() {
-		accept(new NodeVisitor() {
-			@Override
-			public void visitMethod(ClassNode c, MethodNode m) {
-				m.graph();
+		try {
+			accept(new NodeVisitor() {
+				@Override
+				public void visitMethod(ClassNode c, MethodNode m) {
+					m.graph();
+				}
+			});
+			for (NodeVisitor visitor : Deobfuscator.TREE_TRANSFORMERS[Deobfuscator.getPhase()]) {
+				accept(visitor);
 			}
-		});
-		for (NodeVisitor visitor : Deobfuscator.TREE_TRANSFORMERS[Deobfuscator.getPhase()]) {
-			accept(visitor);
+			accept(new NodeVisitor() {
+				@Override
+				public void visitMethod(ClassNode c, MethodNode m) {
+					m.releaseGraph();
+				}
+			});
+		} catch(Exception e) {
+			System.out.println();
+			System.err.println("Error caught while transforming chunk!");
+			e.printStackTrace();
 		}
-		accept(new NodeVisitor() {
-			@Override
-			public void visitMethod(ClassNode c, MethodNode m) {
-				m.releaseGraph();
-			}
-		});
 		Deobfuscator.onFinish(this);
 	}
 }

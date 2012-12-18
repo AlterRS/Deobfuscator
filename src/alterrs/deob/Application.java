@@ -37,6 +37,7 @@ import EDU.purdue.cs.bloat.reflect.ClassInfo;
 import alterrs.deob.tree.ClassNode;
 import alterrs.deob.tree.FieldNode;
 import alterrs.deob.tree.MethodNode;
+import alterrs.deob.util.FileUtilities;
 import alterrs.deob.util.NodeVisitor;
 
 public class Application {
@@ -90,9 +91,31 @@ public class Application {
 	}
 
 	public void save(File file) throws IOException {
-		File temp = new File("./temp" + System.currentTimeMillis() + "/").getCanonicalFile();
-		
-		loader.setOutputDir(temp);
+		boolean jar = file.getName().endsWith(".jar") || file.getName().endsWith(".zip");
+		if(jar) {
+			File temp = new File("./temp" + System.currentTimeMillis() + "/").getCanonicalFile();
+			
+			loader.setOutputDir(temp);
+			commit();
+			
+			JarOutputStream jos = new JarOutputStream(new FileOutputStream(file));
+			saveDir(temp, jos, temp);
+			jos.close();
+			
+			FileUtilities.deleteDir(temp);
+		} else {
+			loader.setOutputDir(file);
+			commit();
+		}
+	}
+	
+	public File tempSave() throws IOException {
+		File temp = new File("./temp" + System.currentTimeMillis() + ".jar").getCanonicalFile();
+		save(temp);
+		return temp;
+	}
+	
+	private void commit() {
 		for (ClassNode c : classes) {
 			for (MethodNode m : c.methods()) {
 				m.releaseGraph();
@@ -101,12 +124,6 @@ public class Application {
 			c.editor.commit();
 			c.info.commit();
 		}
-		
-		JarOutputStream jos = new JarOutputStream(new FileOutputStream(file));
-		saveDir(temp, jos, temp);
-		jos.close();
-		
-		deleteDir(temp);
 	}
 	
 	private void saveDir(File dir, JarOutputStream jos, File parent) throws IOException {
@@ -127,18 +144,6 @@ public class Application {
 			in.close();
 			jos.closeEntry();
 		}
-	}
-	
-	private void deleteDir(File dir) {
-		for(File file : dir.listFiles()) {
-			if(file.isDirectory()) {
-				deleteDir(file);
-				continue;
-			}
-			
-			file.delete();
-		}
-		dir.delete();
 	}
 
 	public Chunk[] split(int d) {
