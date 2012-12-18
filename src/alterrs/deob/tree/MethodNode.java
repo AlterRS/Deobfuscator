@@ -142,8 +142,8 @@ public class MethodNode {
 			editor.clearCode();
 			graph.visit(codegen);
 			
-			final StackOpt so = new StackOpt();
-			so.transform(editor);
+			//final StackOpt so = new StackOpt();
+			//so.transform(editor);
 			
 			graph = null;
 			graphInUse = false;
