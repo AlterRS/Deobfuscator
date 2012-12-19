@@ -36,6 +36,8 @@ import alterrs.deob.util.TreeNodeVisitor;
 public class MultiplierDeobfuscationPhase2 extends TreeNodeVisitor {
 	private int simpleCodecCount = 0;
 	private int arithConstantCount = 0;
+	private int unsafeArith = 0;
+	private int unsafeStore = 0;
 	private int storeConstantCount = 0;
 
 	@Override
@@ -102,37 +104,14 @@ public class MultiplierDeobfuscationPhase2 extends TreeNodeVisitor {
 								
 								if(v != 1) {
 									if((Math.abs(v) & 0xffff) != Math.abs(v)) {
-										int in = value.intValue() * ((int) codec.decoder);
-										if(storeCodec != null) {
-											in *= ((int) storeCodec.encoder);
-										}
-										if((Math.abs(in) & 0xffff) == Math.abs(in)) {
-											v = in;
-										} else {
-											in = value.intValue() * ((int) codec.decoder);
-											if(storeCodec != null) {
-												in *= ((int) storeCodec.decoder);
-											}
-											if((Math.abs(in) & 0xffff) == Math.abs(in)) {
-												v = in;
-											} else {
-												in = value.intValue() * ((int) codec.encoder);
-												if(storeCodec != null) {
-													in *= ((int) storeCodec.encoder);
-												}	
-												if((Math.abs(in) & 0xffff) == Math.abs(in)) {
-													v = in;
-												} else {
-													System.out.println(field + " * " + v + "     unsafe: " + codec.unsafe + ", unsafe2: " + (storeCodec != null ? storeCodec.unsafe : false) );
-													System.out.println("codec : [" + codec + "], store_codec decoder: [" + storeCodec + "], inverse: " + in);
-													System.out.println(expr.stmt());	
-												}
-											}
-											
-											
-											
-										}
+										unsafeArith++;
+										//System.out.println(field + " * " + v + "     unsafe: " + codec.unsafe + ", unsafe2: " + (storeCodec != null ? storeCodec.unsafe :"null") );
+										//System.out.println("codec : [" + codec + "], store_codec decoder: [" + storeCodec + "], inverse: " + in);
+										//System.out.println(expr.stmt());	
+									} else {
+										System.out.println(field.declaringClass().className() + "." + field.name() + " * " + value + " ---> " + field.name() + " * " + v);
 									}
+									
 									
 									constant.replaceWith(new ConstantExpr(v, Type.INTEGER));
 								} else {
@@ -145,6 +124,9 @@ public class MultiplierDeobfuscationPhase2 extends TreeNodeVisitor {
 								}
 								
 								if(v != 1) {
+									if((Math.abs(v) & 0xffff) != Math.abs(v)) {
+										unsafeArith++;
+									}
 									constant.replaceWith(new ConstantExpr(v, Type.LONG));
 								}
 							}
@@ -177,9 +159,15 @@ public class MultiplierDeobfuscationPhase2 extends TreeNodeVisitor {
 				Number value = (Number) constant.value();
 				if(value instanceof Integer) {
 					int v = value.intValue() * ((int) codec.decoder);	
+					if((Math.abs(v) & 0xffff) != Math.abs(v)) {
+						unsafeStore++;
+					}
 					constant.replaceWith(new ConstantExpr(v, Type.INTEGER));
 				} else {
 					long v = value.longValue() * codec.decoder;
+					if((Math.abs(v) & 0xffffffff) != Math.abs(v)) {
+						unsafeStore++;
+					}
 					constant.replaceWith(new ConstantExpr(v, Type.LONG));
 				}
 				storeConstantCount++;
@@ -189,7 +177,7 @@ public class MultiplierDeobfuscationPhase2 extends TreeNodeVisitor {
 	
 	public void onFinish() {
 		System.out.println("Removed " + simpleCodecCount + " simple codec multiplications!");
-		System.out.println("Unfolded " + arithConstantCount + " arithmetic codec constants!");
-		System.out.println("Unfolded " + storeConstantCount + " store codec constants!");
+		System.out.println("Unfolded " + arithConstantCount + " arithmetic codec constants! " + (arithConstantCount - unsafeArith) + " safe unfolds and " + (unsafeArith) + " unsafe unfolds!");
+		System.out.println("Unfolded " + storeConstantCount + " store codec constants! " + (storeConstantCount - unsafeStore) + " safe unfolds and " + (unsafeStore) + " unsafe unfolds!");
 	}
 }

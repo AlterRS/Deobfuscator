@@ -163,17 +163,17 @@ public class MultiplierDeobfuscationPhase1 extends TreeNodeVisitor {
 						}
 					}
 					
-					boolean store = false;
-					n = expr;
+					boolean store = expr.parent() instanceof StoreExpr;
+					/*n = expr;
 					while((n = n.parent()) != null) {
 						if(n instanceof StoreExpr) {
 							store = true;
 							break;
 						}
-					}
+					}*/
 					
 					if(store) {
-						//return;
+						//System.out.println("Store!");
 					}
 
 					try {

@@ -33,6 +33,8 @@ import alterrs.deob.trans.PrivilageDeobfuscation;
 import alterrs.deob.trans.TryCatchDeobfuscation;
 import alterrs.deob.trans.euclid.EuclideanInverseDeobfuscation;
 import alterrs.deob.trans.euclid.EuclideanPairIdentifier;
+import alterrs.deob.trans.test.MultiplierDeobfuscationPhase1;
+import alterrs.deob.trans.test.MultiplierDeobfuscationPhase2;
 import alterrs.deob.util.NodeVisitor;
 
 public class Deobfuscator {
@@ -49,10 +51,17 @@ public class Deobfuscator {
 			//new TryCatchDeobfuscation(),
 			//new FieldDeobfuscation(), 
 			//new ClassLiteralDeobfuscation(), 
+		//	new MultiplierDeobfuscationPhase1(),
+			//new EuclideanPairIdentifier(), 
+			//new ControlFlowDeobfuscation(), 
+			//new TryCatchDeobfuscation(),
+			//new FieldDeobfuscation(), 
+			// new ClassLiteralDeobfuscation(), 
 			//new SimpleArithmeticDeobfuscation(),
 		},
 		
 		{ // Phase 2
+			//new MultiplierDeobfuscationPhase2(),
 			new EuclideanInverseDeobfuscation(), 
 		}
 	};
@@ -106,7 +115,7 @@ public class Deobfuscator {
 					executor.submit(chunks[i]);
 				}
 				
-				System.out.println("Application split into "+chunks.length+" chunks!\n");
+				System.out.println("\t^ Application split into "+chunks.length+" chunks!\n");
 				
 				synchronized (lock) {
 					lock.wait();
