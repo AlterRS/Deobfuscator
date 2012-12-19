@@ -13,10 +13,11 @@ import EDU.purdue.cs.bloat.tree.CallStaticExpr;
 import EDU.purdue.cs.bloat.tree.ConstantExpr;
 import EDU.purdue.cs.bloat.tree.Expr;
 import EDU.purdue.cs.bloat.tree.FieldExpr;
-import EDU.purdue.cs.bloat.tree.IfCmpStmt;
+import EDU.purdue.cs.bloat.tree.IfStmt;
 import EDU.purdue.cs.bloat.tree.NewArrayExpr;
 import EDU.purdue.cs.bloat.tree.Node;
 import EDU.purdue.cs.bloat.tree.StaticFieldExpr;
+import EDU.purdue.cs.bloat.tree.StoreExpr;
 import alterrs.deob.tree.ClassNode;
 import alterrs.deob.tree.MethodNode;
 import alterrs.deob.util.TreeNodeVisitor;
@@ -118,7 +119,7 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 					boolean isStaticOpp = oppSide instanceof StaticFieldExpr;
 					if (cst.type().isIntegral() && oppSide instanceof FieldExpr || isStaticOpp) {
 						Node parent = expr.parent();
-						if (parent instanceof IfCmpStmt || parent instanceof CallMethodExpr || parent instanceof CallStaticExpr || parent instanceof NewArrayExpr || parent instanceof ArrayRefExpr || parent instanceof ArithExpr) { 
+						if (parent instanceof IfStmt || parent instanceof CallMethodExpr || parent instanceof CallStaticExpr || parent instanceof NewArrayExpr || parent instanceof ArrayRefExpr || parent instanceof ArithExpr || parent instanceof StoreExpr) { 
 							// If the above condition is satisfied, we know the number is being used and not stored,
 							// therefore, we've found a quotient number.
 							// Improving this statement will improve the amount of pairs found, therefore increasing the overall

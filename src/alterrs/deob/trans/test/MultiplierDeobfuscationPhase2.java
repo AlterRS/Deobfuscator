@@ -182,7 +182,6 @@ public class MultiplierDeobfuscationPhase2 extends TreeNodeVisitor {
 					long v = value.longValue() * codec.decoder;
 					constant.replaceWith(new ConstantExpr(v, Type.LONG));
 				}
-					
 				storeConstantCount++;
 			}
 		}

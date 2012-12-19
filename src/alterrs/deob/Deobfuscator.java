@@ -45,10 +45,10 @@ public class Deobfuscator {
 	public static final NodeVisitor[][] TREE_TRANSFORMERS = new NodeVisitor[][] { 
 		{ // Phase 1
 			new EuclideanPairIdentifier(), 
-			new ControlFlowDeobfuscation(), 
-			new TryCatchDeobfuscation(),
-			new FieldDeobfuscation(), 
-			new ClassLiteralDeobfuscation(), 
+			//new ControlFlowDeobfuscation(), 
+			//new TryCatchDeobfuscation(),
+			//new FieldDeobfuscation(), 
+			//new ClassLiteralDeobfuscation(), 
 			//new SimpleArithmeticDeobfuscation(),
 		},
 		

@@ -1,6 +1,8 @@
 package alterrs.deob.trans.euclid;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
 
 import EDU.purdue.cs.bloat.editor.Type;
 import EDU.purdue.cs.bloat.tree.ArithExpr;
@@ -29,12 +31,13 @@ public class EuclideanInverseDeobfuscation extends TreeNodeVisitor {
 
 	private int simpleConditions;
 	private int unfoldedConditions;
-	private int failedUnfolds;
+	private int storeUnfoldConditions;
+	private List<ConstantExpr> failed = new ArrayList<>();
 
 	public void onFinish() {
 		int pairs = EuclideanPairIdentifier.PAIRS.size();
-		int trueUnfolded = unfoldedConditions - failedUnfolds;
-		System.out.println("Reversed euclidean algorithm. Pairs: "+pairs+"   Conditioning results:  Simple="+simpleConditions+" Unfolded="+trueUnfolded+",   Results summary: "+(trueUnfolded + simpleConditions) +" / "+(unfoldedConditions + simpleConditions));
+		int trueUnfolded = (unfoldedConditions + storeUnfoldConditions) - failed.size();
+		System.out.println("Reversed euclidean algorithm. Pairs: "+pairs+"   Conditioning results:  Simple="+simpleConditions+" Total unfolded="+trueUnfolded+",   Unfolded(store exprs)="+storeUnfoldConditions+", Results summary: "+(trueUnfolded + simpleConditions) +" / "+(unfoldedConditions + storeUnfoldConditions + simpleConditions)+"\n\tUnsafe unfolds=");
 	}
 
 	@Override
@@ -70,10 +73,10 @@ public class EuclideanInverseDeobfuscation extends TreeNodeVisitor {
 								if (unfolded != null) {
 									unfoldedConditions++;
 									cst.replaceWith(unfolded);
-								} else {
+								} else if (!failed.contains(cst)) {
+									failed.add(cst);
 									System.out.println("Unable to unfold cst:   base_val="+cst.value()+", parent_cls_name="+cst.parent().getClass().getSimpleName().toUpperCase()+", bits="+pair.bits());
 									System.out.println(" continued ->    stmt="+cst.stmt()+"\n\tcontinued->, default_unsafe="+pair.isUnsafe());
-									failedUnfolds++;
 								}
 							}
 							break;
@@ -83,6 +86,32 @@ public class EuclideanInverseDeobfuscation extends TreeNodeVisitor {
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
+		}
+	}
+
+	@Override
+	public void visitStoreExpr(ClassNode c, MethodNode m, StoreExpr expr) {
+		if (expr.expr() instanceof ConstantExpr) {
+			ConstantExpr cst = (ConstantExpr) expr.expr();
+
+			boolean isStaticTarget = expr.target() instanceof StaticFieldExpr;
+			if (cst.type().isIntegral() && expr.target() instanceof FieldExpr || isStaticTarget) {
+
+				EuclideanNumberPair pair = EuclideanPairIdentifier.PAIRS.get(isStaticTarget ? ((StaticFieldExpr) expr.target()).field() : ((FieldExpr) expr.target()).field());
+
+				if (pair != null) {
+					Number val = (Number) cst.value();
+					if (val instanceof Integer) {
+						cst.replaceWith(new ConstantExpr(val.intValue() * pair.quotient().intValue(), Type.INTEGER));
+					} else {
+						cst.replaceWith(new ConstantExpr(val.longValue() * pair.quotient().longValue(), Type.LONG));
+					}
+					storeUnfoldConditions++;
+					if (failed.contains(cst)) {
+						failed.remove(cst);
+					}
+				}
+			}
 		}
 	}
 
@@ -102,6 +131,18 @@ public class EuclideanInverseDeobfuscation extends TreeNodeVisitor {
 	public Expr unfold(EuclideanNumberPair pair, ConstantExpr base, Expr oppSide) {
 		if (!base.hasParent()) {
 			return null;
+		}
+
+		if (base.parent() instanceof ArithExpr) { // If this is true, it makes everything easier.
+			// We simply have to unfold a single value by using already gathered data.
+			// We can safely say that the number will be an integer here, worst case scenario, if it isn't we add a few
+			// cast checks.
+			// TODO Finish this code. At the moment it fixes some values and screws up others,
+			// I think if we unfold the constant by searching for a parent store expression, such as the code below,
+			// it should work fine.
+			Number baseVal = (Number) base.value();
+			int val = baseVal.intValue() * pair.product().intValue();
+			return new ConstantExpr(val, base.type());
 		}
 
 		Node parent = base;
@@ -124,52 +165,28 @@ public class EuclideanInverseDeobfuscation extends TreeNodeVisitor {
 		if (target instanceof FieldExpr || isStatic) {
 			storePair = EuclideanPairIdentifier.PAIRS.get(isStatic ? ((StaticFieldExpr) target).field() : ((FieldExpr) target).field());
 		}
-
 		Number baseVal = (Number) base.value();
 		if (baseVal instanceof Integer) {
 			int val = baseVal.intValue() * pair.product().intValue();
 			if (storePair != null) {
 				val *= storePair.quotient().intValue();
 			}
-			if (val != pair.gcd().intValue() || val != 1) {
-				// If this is true, the integer truly needs to be completed
-				// unfolded from it's current state.
-				if((Math.abs(val) & 0xffff) != Math.abs(val)) {
-					int in = baseVal.intValue() * pair.quotient().intValue();
-					if(storePair != null) {
-						in *= storePair.product().intValue();
-					}
-					if((Math.abs(in) & 0xffff) == Math.abs(in)) {
-						return new ConstantExpr(in, Type.INTEGER);
-					}
-					in = baseVal.intValue() * pair.quotient().intValue();
-					if(storePair != null) {
-						in *= storePair.quotient().intValue();
-					}
-					if((Math.abs(in) & 0xffff) == Math.abs(in)) {
-						return new ConstantExpr(in, Type.INTEGER);
-					}
-					in = baseVal.intValue() * pair.quotient().intValue();
-					if(storePair != null) {
-						in *= storePair.product().intValue();
-					}
-					if((Math.abs(in) & 0xffff) == Math.abs(in)) {
-						return new ConstantExpr(in, Type.INTEGER);
-					}
-				}
+
+			if (val == 1) {
+				return (Expr) oppSide.clone();
 			}
-			return (Expr) oppSide.clone();
+			return new ConstantExpr(val, base.type());
 		}
-		
+
 		long val = baseVal.longValue() * pair.product().longValue();
+
 		if (storePair != null) {
 			val *= storePair.quotient().longValue();
 		}
-		
-		if(val != 1 || val != pair.gcd().intValue()) {
-			return new ConstantExpr(val, Type.LONG);
+
+		if(val != 1 || val != pair.gcd().longValue()) {
+			return new ConstantExpr(val, base.type());
 		}
-		
 		return null;
 	}
 }
