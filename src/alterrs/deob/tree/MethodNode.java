@@ -26,7 +26,6 @@ import EDU.purdue.cs.bloat.editor.Instruction;
 import EDU.purdue.cs.bloat.editor.Label;
 import EDU.purdue.cs.bloat.editor.MethodEditor;
 import EDU.purdue.cs.bloat.reflect.MethodInfo;
-import EDU.purdue.cs.bloat.trans.StackOpt;
 import EDU.purdue.cs.bloat.tree.AddressStoreStmt;
 import EDU.purdue.cs.bloat.tree.ArithExpr;
 import EDU.purdue.cs.bloat.tree.ArrayLengthExpr;
