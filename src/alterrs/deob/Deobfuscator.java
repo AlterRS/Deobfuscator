@@ -31,10 +31,8 @@ import alterrs.deob.trans.HandlerDeobfuscation;
 import alterrs.deob.trans.MonitorDeobfuscation;
 import alterrs.deob.trans.PrivilageDeobfuscation;
 import alterrs.deob.trans.TryCatchDeobfuscation;
-import alterrs.deob.trans.euclid.EuclideanInverseDeobfuscation;
+import alterrs.deob.trans.euclid.EuclideanDeobfuscation;
 import alterrs.deob.trans.euclid.EuclideanPairIdentifier;
-import alterrs.deob.trans.test.MultiplierDeobfuscationPhase1;
-import alterrs.deob.trans.test.MultiplierDeobfuscationPhase2;
 import alterrs.deob.util.NodeVisitor;
 
 public class Deobfuscator {
@@ -46,18 +44,16 @@ public class Deobfuscator {
 	
 	public static final NodeVisitor[][] TREE_TRANSFORMERS = new NodeVisitor[][] { 
 		{ // Phase 1
-			new MultiplierDeobfuscationPhase1(),
-			//new EuclideanPairIdentifier(), 
-			//new ControlFlowDeobfuscation(), 
-			//new TryCatchDeobfuscation(),
-			//new FieldDeobfuscation(), 
+			new EuclideanPairIdentifier(), 
+			new ControlFlowDeobfuscation(), 
+			new TryCatchDeobfuscation(),
+			new FieldDeobfuscation(), 
 			// new ClassLiteralDeobfuscation(), 
-			//new SimpleArithmeticDeobfuscation(),
+			// new SimpleArithmeticDeobfuscation(),
 		},
 		
 		{ // Phase 2
-			new MultiplierDeobfuscationPhase2(),
-			//new EuclideanInverseDeobfuscation(), 
+			new EuclideanDeobfuscation(),
 		}
 	};
 	
