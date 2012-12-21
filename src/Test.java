@@ -3,15 +3,10 @@
 public class Test {
 
 	static int a_decoder = 1;
-	public void testArithmetic() {
-		int x = 1;
-		int y = 12;
-		int c = -x + y;
-		
-		if (-(c + -x + y) + x - -y - -x + 2 == 12 - -x) {
-			System.out.println("...");
-		}
-		
+	static Test[] aClass303Array10392;
+	int lol;
+	public void testArithmetic(int i) {
+		((Test) this).lol += -1286376975;
 	}
 	
 	public void test2() {

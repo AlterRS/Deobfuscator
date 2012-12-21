@@ -7,14 +7,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import EDU.purdue.cs.bloat.editor.MemberRef;
 import EDU.purdue.cs.bloat.tree.ArithExpr;
-import EDU.purdue.cs.bloat.tree.ArrayRefExpr;
-import EDU.purdue.cs.bloat.tree.CallMethodExpr;
-import EDU.purdue.cs.bloat.tree.CallStaticExpr;
 import EDU.purdue.cs.bloat.tree.ConstantExpr;
 import EDU.purdue.cs.bloat.tree.Expr;
 import EDU.purdue.cs.bloat.tree.FieldExpr;
-import EDU.purdue.cs.bloat.tree.IfStmt;
-import EDU.purdue.cs.bloat.tree.NewArrayExpr;
+import EDU.purdue.cs.bloat.tree.MemExpr;
 import EDU.purdue.cs.bloat.tree.Node;
 import EDU.purdue.cs.bloat.tree.StaticFieldExpr;
 import EDU.purdue.cs.bloat.tree.StoreExpr;
@@ -34,10 +30,10 @@ import alterrs.deob.util.TreeNodeVisitor;
 public class EuclideanPairIdentifier extends TreeNodeVisitor {
 
 	/**
-	 * The place we store 
+	 * The place we store pairs for post phases.
 	 */
 	public static final Map<MemberRef, EuclideanNumberPair> PAIRS = new HashMap<>();
-	
+
 	public void onFinish() {
 		int unsafe = 0;
 		for (EuclideanNumberPair pair : PAIRS.values()) {
@@ -57,9 +53,9 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 		 * True value is the decoded value {@see <init>}
 		 */
 		private BigInteger product, quotient, gcd, trueValue;
-		
+
 		/**
-		 * If this is flagged {@code true}, the gcd was not <1>.
+		 * If the unsafe flag is flagged {@code true}, the gcd was not <1>.
 		 * This is a very bad thing.
 		 */
 		private boolean unsafe;
@@ -69,13 +65,13 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 		 * 32 = int, 64 = long
 		 */
 		private int bits;
-		
+
 		public EuclideanNumberPair(BigInteger product, BigInteger quotient, BigInteger gcd, int bits, boolean unsafe) {
 			this.product = product;
 			this.quotient = quotient;
 			this.gcd = gcd;
 			this.bits = bits;
-			
+
 			BigInteger k = gcd.multiply(product);
 			this.trueValue = quotient.multiply(k);
 		}
@@ -91,11 +87,11 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 		public BigInteger gcd() {
 			return gcd;
 		}
-		
+
 		public BigInteger trueValue() {
 			return trueValue;
 		}
-		
+
 		public int bits() {
 			return bits;
 		}
@@ -119,31 +115,33 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 					boolean isStaticOpp = oppSide instanceof StaticFieldExpr;
 					if (cst.type().isIntegral() && oppSide instanceof FieldExpr || isStaticOpp) {
 						Node parent = expr.parent();
-						if (parent instanceof IfStmt || parent instanceof CallMethodExpr || parent instanceof CallStaticExpr || parent instanceof NewArrayExpr || parent instanceof ArrayRefExpr || parent instanceof ArithExpr || parent instanceof StoreExpr) { 
-							// If the above condition is satisfied, we know the number is being used and not stored,
-							// therefore, we've found a quotient number.
-							// Improving this statement will improve the amount of pairs found, therefore increasing the overall
-							// results of the phase 2 transformer. We mark this as a TODO .
-							boolean isLongCst = cst.value() instanceof Long;
-							long val = isLongCst ? ((long) cst.value()) : (int) cst.value();
-							
-							if ((val & 1) == 0) {
+						if (parent instanceof StoreExpr) {
+							MemExpr target = ((StoreExpr) parent).target();
+							if (!(target instanceof FieldExpr || target instanceof StaticFieldExpr)) {
 								return;
 							}
-							
+						}
+						boolean isLongCst = cst.value() instanceof Long;
+						if (isLongCst || cst.value() instanceof Integer) {
+							long val = isLongCst ? ((long) cst.value()) : (int) cst.value();
 							BigInteger quotient = BigInteger.valueOf(val);
+
+							if ((val & 1) == 0) {//Not invertible. (Even number)
+								return;
+							}
+
 							AtomicBoolean unsafe = new AtomicBoolean(false);
-							
+
 							EuclideanNumberPair pair = decipher(quotient, isLongCst ? 64 : 32, unsafe);
-							
-							
+
+
 							MemberRef field =  isStaticOpp ? ((StaticFieldExpr) oppSide).field() : ((FieldExpr) oppSide).field();
 							EuclideanNumberPair prev = PAIRS.get(field);
-							
+
 							if (prev != null) {
 								return;
 							}
-							
+
 							PAIRS.put(field, pair);
 						}
 					}
@@ -174,7 +172,7 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 				unsafe.set(true);
 			}
 		}
-		
+
 		return new EuclideanNumberPair(product, quotient, g, bits, unsafe.get());
 
 	}
