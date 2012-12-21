@@ -115,12 +115,14 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 					boolean isStaticOpp = oppSide instanceof StaticFieldExpr;
 					if (cst.type().isIntegral() && oppSide instanceof FieldExpr || isStaticOpp) {
 						Node parent = expr.parent();
+						
 						if (parent instanceof StoreExpr) {
 							MemExpr target = ((StoreExpr) parent).target();
 							if (!(target instanceof FieldExpr || target instanceof StaticFieldExpr)) {
 								return;
 							}
 						}
+						
 						boolean isLongCst = cst.value() instanceof Long;
 						if (isLongCst || cst.value() instanceof Integer) {
 							long val = isLongCst ? ((long) cst.value()) : (int) cst.value();

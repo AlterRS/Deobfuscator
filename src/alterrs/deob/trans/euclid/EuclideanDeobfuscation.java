@@ -104,9 +104,6 @@ public class EuclideanDeobfuscation extends TreeNodeVisitor {
 			
 			if((Math.abs(v) & 0xfffff) != v) {
 				unsafe = true;
-				if(loadCodec == storeCodec) {
-					//System.out.println(expr.parent());
-				}
 			}
 		} else if(encodedValue instanceof Long) {
 			long v = encodedValue.longValue();
