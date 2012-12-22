@@ -120,4 +120,5 @@ public class CallMethodExpr extends CallExpr {
 		return copyInto(new CallMethodExpr(kind, (Expr) receiver.clone(), p,
 				method, type));
 	}
+	
 }

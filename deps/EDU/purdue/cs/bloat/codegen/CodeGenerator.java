@@ -664,7 +664,7 @@ public class CodeGenerator extends TreeVisitor implements Opcode {
 						|| (last instanceof RetStmt) || last == null);
 
 				if (last == null) {
-					System.out.println("removing " + block + ", succs: " + cfg.succs(block).size());
+				//	System.out.println("removing " + block + ", succs: " + cfg.succs(block).size());
 					cfg.nodes().remove(block);
 				} else if (last instanceof GotoStmt) {
 					// All a block does is jump to another block

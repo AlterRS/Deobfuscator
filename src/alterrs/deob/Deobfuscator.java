@@ -1,5 +1,5 @@
 /**
- * Copyright (C) <2012> <Lazaro Brito>
+ * Copyright (C) <2012> <Lazaro Brito> <Shawn D>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
  * and associated documentation files (the "Software"), to deal in the Software without restriction, 
@@ -24,7 +24,6 @@ import java.util.concurrent.Executors;
 import java.util.zip.ZipFile;
 
 import EDU.purdue.cs.bloat.editor.MethodEditor;
-import alterrs.deob.trans.ClassLiteralDeobfuscation;
 import alterrs.deob.trans.ControlFlowDeobfuscation;
 import alterrs.deob.trans.FieldDeobfuscation;
 import alterrs.deob.trans.HandlerDeobfuscation;
@@ -33,13 +32,15 @@ import alterrs.deob.trans.PrivilageDeobfuscation;
 import alterrs.deob.trans.TryCatchDeobfuscation;
 import alterrs.deob.trans.euclid.EuclideanDeobfuscation;
 import alterrs.deob.trans.euclid.EuclideanPairIdentifier;
+import alterrs.deob.trans.redundancy.RedundantMethodDeobfuscation;
+import alterrs.deob.trans.redundancy.graph.CallGraphBuilder;
+import alterrs.deob.trans.redundancy.graph.CallGraphInvokeBuilder;
 import alterrs.deob.util.NodeVisitor;
-
 public class Deobfuscator {
 	private static Application app = null;
 
 	public static final NodeVisitor[] MISC_PRE_TRANSFORMERS = new NodeVisitor[] {
-		new HandlerDeobfuscation(), new PrivilageDeobfuscation()
+		new HandlerDeobfuscation(), new PrivilageDeobfuscation(),
 	};
 	
 	public static final NodeVisitor[][] TREE_TRANSFORMERS = new NodeVisitor[][] { 
@@ -48,12 +49,18 @@ public class Deobfuscator {
 			new ControlFlowDeobfuscation(), 
 			new TryCatchDeobfuscation(),
 			new FieldDeobfuscation(), 
+			new CallGraphBuilder(),
 			// new ClassLiteralDeobfuscation(), 
 			// new SimpleArithmeticDeobfuscation(),
 		},
 		
 		{ // Phase 2
 			new EuclideanDeobfuscation(),
+			new CallGraphInvokeBuilder(),
+		},
+		
+		{ // Phase 3
+			new RedundantMethodDeobfuscation()
 		}
 	};
 	
