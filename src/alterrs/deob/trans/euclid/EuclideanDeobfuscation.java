@@ -18,6 +18,8 @@
  */
 package alterrs.deob.trans.euclid;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 import EDU.purdue.cs.bloat.editor.MemberRef;
 import EDU.purdue.cs.bloat.tree.ArithExpr;
 import EDU.purdue.cs.bloat.tree.ConstantExpr;
@@ -27,6 +29,7 @@ import EDU.purdue.cs.bloat.tree.MemExpr;
 import EDU.purdue.cs.bloat.tree.Node;
 import EDU.purdue.cs.bloat.tree.StaticFieldExpr;
 import EDU.purdue.cs.bloat.tree.StoreExpr;
+import EDU.purdue.cs.bloat.tree.TreeVisitor;
 import alterrs.deob.trans.euclid.EuclideanPairIdentifier.EuclideanNumberPair;
 import alterrs.deob.tree.ClassNode;
 import alterrs.deob.tree.MethodNode;
@@ -36,6 +39,19 @@ public class EuclideanDeobfuscation extends TreeNodeVisitor {
 	private int simple = 0;
 	private int unfold = 0;
 	private int unsafeUnfold = 0;
+	
+	private Expr nonConstant(ArithExpr expr) {
+		if(expr.left() instanceof ConstantExpr) {
+			if(!(expr.right() instanceof ConstantExpr)) {
+				return expr.right();
+			}
+		} else if(expr.right() instanceof ConstantExpr) {
+			if(!(expr.left() instanceof ConstantExpr)) {
+				return expr.left();
+			}
+		}
+		return null;
+	}
 	
 	public void visitArithExpr(ClassNode c, MethodNode m, ArithExpr expr) {
 		if(expr.operation() != ArithExpr.MUL && expr.operation() != ArithExpr.ADD && expr.operation() != ArithExpr.SUB) {
@@ -53,14 +69,28 @@ public class EuclideanDeobfuscation extends TreeNodeVisitor {
 		}
 		
 		if(constant != null) {
-			MemberRef field = null;
-			if(other instanceof FieldExpr) {
-				field = ((FieldExpr) other).field();
-			} else if(other instanceof StaticFieldExpr) {
-				field = ((StaticFieldExpr) other).field();
-			}
-			
-			EuclideanNumberPair loadCodec = EuclideanPairIdentifier.PAIRS.get(field);
+			final AtomicReference<MemberRef> atomicField = new AtomicReference<>(null);
+			expr.visitChildren(new TreeVisitor() {
+				@Override
+				public void visitExpr(Expr child) {
+					if(child instanceof ConstantExpr) {
+						return;
+					}
+					
+					if(child instanceof FieldExpr) {
+						atomicField.set(((FieldExpr) child).field());
+					} else if(child instanceof StaticFieldExpr) {
+						atomicField.set(((StaticFieldExpr) child).field());
+					} else if(child instanceof StoreExpr) {
+						if(child.parent() instanceof ArithExpr && ((ArithExpr) child.parent()).operation() != ArithExpr.MUL) {
+							return;
+						}
+						
+						child.visitChildren(this);
+					}
+				}
+			});
+			EuclideanNumberPair loadCodec = EuclideanPairIdentifier.PAIRS.get(atomicField.get());
 			
 			StoreExpr store = null;
 			Node n = expr;
@@ -104,9 +134,6 @@ public class EuclideanDeobfuscation extends TreeNodeVisitor {
 			
 			if((Math.abs(v) & 0xfffff) != v) {
 				unsafe = true;
-				if(loadCodec == storeCodec) {
-					//System.out.println(expr.parent());
-				}
 			}
 		} else if(encodedValue instanceof Long) {
 			long v = encodedValue.longValue();
