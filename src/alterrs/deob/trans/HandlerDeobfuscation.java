@@ -20,9 +20,11 @@ package alterrs.deob.trans;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import EDU.purdue.cs.bloat.editor.Label;
 import EDU.purdue.cs.bloat.editor.MethodEditor;
@@ -33,8 +35,6 @@ import alterrs.deob.tree.MethodNode;
 import alterrs.deob.util.NodeVisitor;
 
 public class HandlerDeobfuscation extends NodeVisitor {
-	public int count, count2 = 0;
-	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	public void visitMethod(ClassNode c, MethodNode m) {
@@ -53,14 +53,6 @@ public class HandlerDeobfuscation extends NodeVisitor {
 			} else {
 				tryCatchPositions.get(handlerPos).add(tc);
 			}
-			
-			/* if(tc.type() != null && tc.type().equals(Type.getType(Object.class))) {
-				e.tryCatches().remove(tc);
-				e.addTryCatch(new TryCatch(tc.start(), tc.end(), tc.handler(), Type.getType(Throwable.class)));
-				count2++;
-			} else {
-				//System.out.println
-			} */
 		}
 		
 		for (Map.Entry<Integer, List<TryCatch>> entry : tryCatchPositions
@@ -71,8 +63,12 @@ public class HandlerDeobfuscation extends NodeVisitor {
 				int endPos = 0;
 
 				Label handler = tryCatches.get(0).handler();
-				Type type = tryCatches.get(0).type();
 
+				Set<Type> types = new HashSet<Type>();
+				for(TryCatch tc : tryCatches) {
+					types.add(tc.type());
+				}
+				
 				for (TryCatch tc : tryCatches) {
 					int startPos_ = e.code().indexOf(tc.start());
 					if (startPos_ < startPos) {
@@ -87,15 +83,14 @@ public class HandlerDeobfuscation extends NodeVisitor {
 					e.tryCatches().remove(tc);
 				}
 
-				e.addTryCatch(new TryCatch((Label) e.codeElementAt(startPos), (Label) e.codeElementAt(endPos), handler, type));
-				count++;
+				for(Type type : types) {
+					e.addTryCatch(new TryCatch((Label) e.codeElementAt(startPos), (Label) e.codeElementAt(endPos), handler, type));
+				}
 			}
 		}
 	}
 	
 	@Override
 	public void onFinish() {
-		System.out.println("Reorganized " + count + " handler tables!");
-		// System.out.println("Fixed " + count2 + " handler types!");
 	}
 }

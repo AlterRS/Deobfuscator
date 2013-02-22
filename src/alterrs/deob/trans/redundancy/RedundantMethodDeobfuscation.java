@@ -15,6 +15,7 @@ import alterrs.deob.util.NodeVisitor;
  */
 public class RedundantMethodDeobfuscation extends NodeVisitor {
 
+	@SuppressWarnings("unused")
 	private int deleted;
 	private int calls;
 	

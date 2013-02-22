@@ -29,16 +29,13 @@ import EDU.purdue.cs.bloat.cfg.FlowGraph;
 import EDU.purdue.cs.bloat.cfg.Handler;
 import EDU.purdue.cs.bloat.editor.Type;
 import EDU.purdue.cs.bloat.tree.GotoStmt;
-import EDU.purdue.cs.bloat.tree.NewExpr;
-import EDU.purdue.cs.bloat.tree.Stmt;
-import EDU.purdue.cs.bloat.tree.TreeVisitor;
 import alterrs.deob.tree.ClassNode;
 import alterrs.deob.tree.MethodNode;
 import alterrs.deob.util.TreeNodeVisitor;
 
 public class TryCatchDeobfuscation extends TreeNodeVisitor {
 	public int count = 0;
-	
+
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	public void visitMethod(ClassNode c, MethodNode m) {
@@ -49,10 +46,10 @@ public class TryCatchDeobfuscation extends TreeNodeVisitor {
 			Handler handler = handlerEntry.getValue();
 			
 			if(handler.catchType().equals(Type.getType(RuntimeException.class))) {
-				final AtomicBoolean flag = new AtomicBoolean(false);
+				final AtomicBoolean flag = new AtomicBoolean(true);
 				
 				Block block = ((GotoStmt) handler.catchBlock().tree().lastStmt()).target();
-				block.tree().visitChildren(new TreeVisitor() {
+				/*block.tree().visitChildren(new TreeVisitor() {
 					@Override
 					public void visitStmt(Stmt s) {
 						s.visitChildren(this);
@@ -64,7 +61,7 @@ public class TryCatchDeobfuscation extends TreeNodeVisitor {
 							flag.set(true);
 						}
 					}
-				});
+				});*/
 				
 				if(flag.get()) {
 					it.remove();

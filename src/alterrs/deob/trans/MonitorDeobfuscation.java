@@ -28,7 +28,7 @@ import static EDU.purdue.cs.bloat.editor.Instruction.*;
 
 public class MonitorDeobfuscation extends InsnNodeVisitor {
 	public int count = 0;
-	
+
 	@Override
 	public void visitInsn(ClassNode c, MethodNode m, Instruction monitor) {
 		if(monitor.opcodeClass() == opc_monitorenter) {

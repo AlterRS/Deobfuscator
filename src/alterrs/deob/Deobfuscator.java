@@ -30,42 +30,39 @@ import alterrs.deob.trans.HandlerDeobfuscation;
 import alterrs.deob.trans.MonitorDeobfuscation;
 import alterrs.deob.trans.PrivilageDeobfuscation;
 import alterrs.deob.trans.TryCatchDeobfuscation;
-import alterrs.deob.trans.euclid.EuclideanDeobfuscation;
-import alterrs.deob.trans.euclid.EuclideanPairIdentifier;
-import alterrs.deob.trans.redundancy.RedundantMethodDeobfuscation;
-import alterrs.deob.trans.redundancy.graph.CallGraphBuilder;
-import alterrs.deob.trans.redundancy.graph.CallGraphInvokeBuilder;
 import alterrs.deob.util.NodeVisitor;
+
 public class Deobfuscator {
 	private static Application app = null;
 
 	public static final NodeVisitor[] MISC_PRE_TRANSFORMERS = new NodeVisitor[] {
-		new HandlerDeobfuscation(), new PrivilageDeobfuscation(),
+		new HandlerDeobfuscation(), 
+		new PrivilageDeobfuscation(),
 	};
 	
 	public static final NodeVisitor[][] TREE_TRANSFORMERS = new NodeVisitor[][] { 
 		{ // Phase 1
-			new EuclideanPairIdentifier(), 
+			// new EuclideanPairIdentifier(), 
 			new ControlFlowDeobfuscation(), 
 			new TryCatchDeobfuscation(),
 			new FieldDeobfuscation(), 
-			new CallGraphBuilder(),
+			// new CallGraphBuilder(),
 			// new ClassLiteralDeobfuscation(), 
 			// new SimpleArithmeticDeobfuscation(),
 		},
 		
 		{ // Phase 2
-			new EuclideanDeobfuscation(),
-			new CallGraphInvokeBuilder(),
+			// new EuclideanDeobfuscation(),
+			// new CallGraphInvokeBuilder(),
 		},
 		
-		{ // Phase 3
-			new RedundantMethodDeobfuscation()
-		}
+		//{ // Phase 3
+			// new RedundantMethodDeobfuscation()
+		//}
 	};
 	
 	public static final NodeVisitor[] MISC_POST_TRANSFORMERS = new NodeVisitor[] {
-		new MonitorDeobfuscation()
+		new HandlerDeobfuscation(), new MonitorDeobfuscation()
 	};
 
 

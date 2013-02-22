@@ -40,19 +40,6 @@ public class EuclideanDeobfuscation extends TreeNodeVisitor {
 	private int unfold = 0;
 	private int unsafeUnfold = 0;
 	
-	private Expr nonConstant(ArithExpr expr) {
-		if(expr.left() instanceof ConstantExpr) {
-			if(!(expr.right() instanceof ConstantExpr)) {
-				return expr.right();
-			}
-		} else if(expr.right() instanceof ConstantExpr) {
-			if(!(expr.left() instanceof ConstantExpr)) {
-				return expr.left();
-			}
-		}
-		return null;
-	}
-	
 	public void visitArithExpr(ClassNode c, MethodNode m, ArithExpr expr) {
 		if(expr.operation() != ArithExpr.MUL && expr.operation() != ArithExpr.ADD && expr.operation() != ArithExpr.SUB) {
 			return;

@@ -160,6 +160,9 @@ public class Application {
 				list.clear();
 			}
 		}
+		if(list.size() > 0) {
+			chunks.add(new Chunk(list.toArray(new ClassNode[0])));
+		}
 		return chunks.toArray(new Chunk[0]);
 	}
 
