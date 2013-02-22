@@ -51,10 +51,10 @@ public class Deobfuscator {
 			// new SimpleArithmeticDeobfuscation(),
 		},
 		
-		{ // Phase 2
+		// { // Phase 2
 			// new EuclideanDeobfuscation(),
 			// new CallGraphInvokeBuilder(),
-		},
+		// },
 		
 		//{ // Phase 3
 			// new RedundantMethodDeobfuscation()
