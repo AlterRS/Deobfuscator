@@ -119,7 +119,7 @@ public class EuclideanDeobfuscation extends TreeNodeVisitor {
 			if(storeCodec != null) v *= storeCodec.quotient().intValue();
 			decodedValue = v;
 			
-			if((Math.abs(v) & 0xfffff) != v) {
+			if((Math.abs(v) & 0xfffff) != Math.abs(v)) {
 				unsafe = true;
 			}
 		} else if(encodedValue instanceof Long) {
@@ -128,7 +128,7 @@ public class EuclideanDeobfuscation extends TreeNodeVisitor {
 			if(storeCodec != null) v *= storeCodec.quotient().longValue();
 			decodedValue = v;
 			
-			if((Math.abs(v) & 0xffffffff) != v) {
+			if((Math.abs(v) & 0xffffffff) != Math.abs(v)) {
 				unsafe = true;
 			}
 		} else {

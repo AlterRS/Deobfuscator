@@ -77,7 +77,17 @@ public class ControlFlowDeobfuscation extends TreeNodeVisitor {
 			
 			@Override
 			public void visitReturnStmt(ReturnStmt r) {
-				flag.set(true);
+				if(ldc.value() instanceof Integer) {
+					int v = (Integer) ldc.value();
+					if((Math.abs(v) & 0xfffff) != Math.abs(v)) {
+						flag.set(true);
+					}
+				} else {
+					long v = (Long) ldc.value();
+					if((Math.abs(v) & 0xffffffff) != Math.abs(v)) {
+						flag.set(true);
+					}
+				}
 			}
 			
 			@Override
