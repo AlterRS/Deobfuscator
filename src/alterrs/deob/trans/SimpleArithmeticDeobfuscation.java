@@ -1,17 +1,10 @@
 package alterrs.deob.trans;
 
+import java.math.BigInteger;
+
 import EDU.purdue.cs.bloat.tree.ArithExpr;
-import EDU.purdue.cs.bloat.tree.CastExpr;
 import EDU.purdue.cs.bloat.tree.ConstantExpr;
-import EDU.purdue.cs.bloat.tree.Expr;
-import EDU.purdue.cs.bloat.tree.FieldExpr;
-import EDU.purdue.cs.bloat.tree.LocalExpr;
-import EDU.purdue.cs.bloat.tree.NegExpr;
-import EDU.purdue.cs.bloat.tree.StaticFieldExpr;
-import EDU.purdue.cs.bloat.tree.StoreExpr;
-import alterrs.deob.Deobfuscator;
 import alterrs.deob.tree.ClassNode;
-import alterrs.deob.tree.FieldNode;
 import alterrs.deob.tree.MethodNode;
 import alterrs.deob.util.TreeNodeVisitor;
 
@@ -29,6 +22,9 @@ import alterrs.deob.util.TreeNodeVisitor;
  * x - -2
  * -> (neg minus neg = pos)
  * x + 2
+ * 
+ * This class also swaps all left side expressions to do with multiplication
+ * to the right, if it is a ConstantExpr.
  * @author Shawn D.
  */
 public class SimpleArithmeticDeobfuscation extends TreeNodeVisitor {
@@ -36,102 +32,70 @@ public class SimpleArithmeticDeobfuscation extends TreeNodeVisitor {
 	/**
 	 * Counter fields for result printing.
 	 */
-	private int addLogic, subLogic, negationLogic;
+	private int addLogic, subLogic;
+	private int multPref;
 
 	@Override
 	public void onFinish() {
-		System.out.println("Arithmetic logic corrected: IADD Logic: "+addLogic+", ISUB Logic: "+subLogic+", Negation logic: "+negationLogic);
+		System.out.println("Arithmetic logic corrected: IADD Logic: "+addLogic+", ISUB Logic: "+subLogic+", Standardized multiplication: "+multPref);
 	}
 
 	@Override
 	public synchronized void visitArithExpr(final ClassNode c, final MethodNode m, final ArithExpr expr) {
 		try {
-			boolean isNegatedLeft = expr.left() instanceof NegExpr;
-			boolean isNegated = isNegatedLeft || expr.right() instanceof NegExpr;
+			if (expr.hasParent() && expr.parent().hasParent() && expr.left().type().isIntegral() && expr.right().type().isIntegral()) {
+				if (expr.operation() == ArithExpr.SUB || expr.operation() == ArithExpr.ADD) {
+					// change x - -y to x + y
+					// change x + -y to x - y
 
-			if (expr.hasParent() && expr.left().type().isIntegral() && expr.right().type().isIntegral()) {
+					if (expr.right() instanceof ConstantExpr) {
+						ConstantExpr cst = (ConstantExpr) expr.right();
 
-				Number leftVal = getValue(expr.left());
-				Number rightVal = getValue(expr.right());
+						BigInteger val = BigInteger.valueOf((int) cst.value());
 
-				if (leftVal != null && rightVal != null || isNegated) {
-					boolean isLeft = isNegated ? isNegatedLeft : leftVal.longValue() < 0;
+						if (val.intValue() < 0) {
+							expr.right().replaceWith(new ConstantExpr(-val.intValue(), expr.type()));
 
-					switch(expr.operation()) {
-					case ArithExpr.ADD:
-					case ArithExpr.SUB:
-						boolean op_add = expr.operation() == ArithExpr.ADD;
-						if (isNegated) {
-							NegExpr negation = (NegExpr) (isNegatedLeft ? expr.left() : expr.right());
-							expr.replaceWith(new ArithExpr(op_add ? ArithExpr.SUB : ArithExpr.ADD, isNegatedLeft ? negation.expr() : expr.left(), isNegatedLeft ? expr.right() : negation.expr(), expr.type()));
-							negationLogic++;
-							break;
-						}
+							boolean add = expr.operation() == ArithExpr.ADD;
+							expr.replaceWith(new ArithExpr(add ? ArithExpr.SUB : ArithExpr.ADD, expr.left(), expr.right(), expr.type()), false);
 
-						if (isLeft || rightVal.longValue() < 0) {
-							if (expr.hasParent()) {
-								if (op_add) {
-									addLogic++;
-								} else {
-									subLogic++;
-								}
-								expr.replaceWith(new ArithExpr(op_add ? ArithExpr.SUB : ArithExpr.ADD, isLeft ? expr.right() : expr.left(), isLeft ? expr.left() : expr.right(), expr.type()));
+							if (add) {
+								addLogic++;
+							} else {
+								subLogic++;
 							}
 						}
-						break;
 					}
+					
+					if (expr.operation() == ArithExpr.ADD) {
+						// change -1 + x to x - 1
+						// change -1 - -x to -1 + x to x - 1
+						if (expr.left() instanceof ConstantExpr) {
+							ConstantExpr cst = (ConstantExpr) expr.left();
 
+							BigInteger val = BigInteger.valueOf((int) cst.value());
+
+							if (val.intValue() < 0) {
+								System.out.print(c.name()+"."+m.name()+", \t"+expr.stmt()+"\n\t\t");
+								expr.replaceWith(new ArithExpr(ArithExpr.SUB, expr.right(), new ConstantExpr(-val.intValue(), expr.type()), expr.type()), false);
+								addLogic++;
+							}
+						}
+					}
+				}
+				
+				if (expr.operation() == ArithExpr.MUL && expr.left() instanceof ConstantExpr) {
+					// change cst * field to field * cst
+					// change cst * var to var * cst
+					// This is 100% for personal preference and does not altar any real logic in the code at all.
+					
+					expr.replaceWith(new ArithExpr(ArithExpr.MUL, expr.right(), expr.left(), expr.type()), false);
+					multPref++;
 				}
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-	}
-
-	/**
-	 * Gets the number value for the specified expression, or null if
-	 * there is no usable number.
-	 * @param expr The expression to get the value of.
-	 * @return The number value.
-	 */
-	public static final Number getValue(Expr expr) {
-		if (expr instanceof NegExpr) {
-			return getValue(((NegExpr) expr).expr());
-		}
-		if (expr instanceof LocalExpr) {
-			return ((LocalExpr) expr).index();
-		}
-		if (expr instanceof StoreExpr) {
-			return getValue(((StoreExpr) expr).expr());
-		}
-		if (expr instanceof CastExpr) {
-			return getValue(((CastExpr) expr).expr());
-		}
-		if (expr instanceof ConstantExpr) {
-			return (Number) ((ConstantExpr) expr).value();
-		}
-		if (expr instanceof FieldExpr) {
-			FieldNode fn = Deobfuscator.getApp().field(((FieldExpr) expr).field());
-			return fn != null ? fn.info.constantValue() : null;
-		}
-		if (expr instanceof StaticFieldExpr) {
-			FieldNode fn = Deobfuscator.getApp().field(((StaticFieldExpr) expr).field());
-			return fn != null ? fn.info.constantValue() : null;
-		}
-		if (expr instanceof ArithExpr) {
-			ArithExpr arith = (ArithExpr) expr;
-
-			Number lv = getValue(arith.left());
-			if (lv != null && lv.longValue() < 0) {
-				return lv;
-			}
-
-			Number rv = getValue(arith.right());
-			if (rv != null && rv.longValue() < 0) {
-				return rv;
-			}
-		}
-		return null;
 	}
 
 }
