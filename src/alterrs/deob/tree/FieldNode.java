@@ -44,4 +44,20 @@ public class FieldNode {
 	public String toString() {
 		return owner.name() + "." + name() + signature();
 	}
+	
+	@Override
+	public boolean equals(Object object) {
+		if(object instanceof FieldNode) {
+			FieldNode n2 = (FieldNode) object;
+			if(n2.owner.equals(owner) && n2.name().equals(name()) && n2.signature().equals(signature())) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	@Override
+	public int hashCode() {
+		return (name().hashCode() & 0xffff) << 16 | signature().hashCode(); 
+	}
 }

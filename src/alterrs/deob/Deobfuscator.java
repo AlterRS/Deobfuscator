@@ -24,12 +24,14 @@ import java.util.concurrent.Executors;
 import java.util.zip.ZipFile;
 
 import EDU.purdue.cs.bloat.editor.MethodEditor;
+import alterrs.deob.asm.Renamer;
 import alterrs.deob.trans.ControlFlowDeobfuscation;
-import alterrs.deob.trans.FieldDeobfuscation;
 import alterrs.deob.trans.HandlerDeobfuscation;
 import alterrs.deob.trans.MonitorDeobfuscation;
-import alterrs.deob.trans.PrivilageDeobfuscation;
+import alterrs.deob.trans.SimpleArithmeticDeobfuscation;
 import alterrs.deob.trans.TryCatchDeobfuscation;
+import alterrs.deob.trans.euclid.EuclideanDeobfuscation;
+import alterrs.deob.trans.euclid.EuclideanPairIdentifier;
 import alterrs.deob.util.NodeVisitor;
 
 public class Deobfuscator {
@@ -37,28 +39,27 @@ public class Deobfuscator {
 
 	public static final NodeVisitor[] MISC_PRE_TRANSFORMERS = new NodeVisitor[] {
 		new HandlerDeobfuscation(), 
-		new PrivilageDeobfuscation(),
 	};
 	
 	public static final NodeVisitor[][] TREE_TRANSFORMERS = new NodeVisitor[][] { 
 		{ // Phase 1
-			// new EuclideanPairIdentifier(), 
 			new ControlFlowDeobfuscation(), 
 			new TryCatchDeobfuscation(),
-			new FieldDeobfuscation(), 
+			// new FieldDeobfuscation(), 
 			// new CallGraphBuilder(),
 			// new ClassLiteralDeobfuscation(), 
-			// new SimpleArithmeticDeobfuscation(),
+			new SimpleArithmeticDeobfuscation(),
+			new EuclideanPairIdentifier(), 
 		},
 		
-		// { // Phase 2
-			// new EuclideanDeobfuscation(),
+		{ // Phase 2
+			new EuclideanDeobfuscation(),
 			// new CallGraphInvokeBuilder(),
-		// },
+		},
 		
-		//{ // Phase 3
+		// { // Phase 3
 			// new RedundantMethodDeobfuscation()
-		//}
+		// }
 	};
 	
 	public static final NodeVisitor[] MISC_POST_TRANSFORMERS = new NodeVisitor[] {
@@ -81,9 +82,10 @@ public class Deobfuscator {
 
 	public static void main(String[] args) {
 		try {
-			System.out.println("Loading application... [" + args[0] + "]");
-			app = new Application(new ZipFile(args[0]));
-			//app = new Application("./bin/Test.class");
+			Renamer.main(new String[0]);
+			
+			System.out.println("Loading application...");
+			app = new Application(new ZipFile("./input2.jar"));
 			System.out.println("Loaded " + app.size() + " classes!");
 			System.out.println();
 
@@ -143,7 +145,7 @@ public class Deobfuscator {
 			}
 			System.out.println();
 
-			String output = args[1].replace("$t",
+			String output = "output.jar".replace("$t",
 					new StringBuilder().append(System.currentTimeMillis()));
 			System.out.println("Saving application... [" + output + "]");
 			app.save(new File(output));

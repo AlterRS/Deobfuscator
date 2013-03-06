@@ -4,27 +4,28 @@ import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
-import EDU.purdue.cs.bloat.editor.MemberRef;
 import EDU.purdue.cs.bloat.tree.ArithExpr;
 import EDU.purdue.cs.bloat.tree.ConstantExpr;
 import EDU.purdue.cs.bloat.tree.Expr;
 import EDU.purdue.cs.bloat.tree.FieldExpr;
 import EDU.purdue.cs.bloat.tree.MemExpr;
-import EDU.purdue.cs.bloat.tree.Node;
 import EDU.purdue.cs.bloat.tree.StaticFieldExpr;
 import EDU.purdue.cs.bloat.tree.StoreExpr;
+import EDU.purdue.cs.bloat.tree.TreeVisitor;
+import alterrs.deob.Deobfuscator;
 import alterrs.deob.tree.ClassNode;
+import alterrs.deob.tree.FieldNode;
 import alterrs.deob.tree.MethodNode;
 import alterrs.deob.util.TreeNodeVisitor;
 
 /**
+ * Phase 1
+ * 
+ * Generates the euclidean pairs for each integer/long field.
  *
- * PHASE 1
- * Reverses number obfuscation which uses the
- * euclidean GCD algorithm.
- * Referenced super_'s post on the "Integer obfuscation" discussion.
- * @see http://en.wikipedia.org/wiki/Euclidean_algorithm for var name explanations.
+ * @author Lazaro Brito
  * @author Shawn D.
  */
 public class EuclideanPairIdentifier extends TreeNodeVisitor {
@@ -32,41 +33,35 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 	/**
 	 * The place we store pairs for post phases.
 	 */
-	public static final Map<MemberRef, EuclideanNumberPair> PAIRS = new HashMap<>();
+	public static final Map<FieldNode, EuclideanNumberPair> PAIRS = new HashMap<>();
 
 	public void onFinish() {
-		int unsafe = 0;
-		for (EuclideanNumberPair pair : PAIRS.values()) {
-			if (pair.unsafe) {
-				unsafe++;
-			}
-		}
-		System.out.println("Found "+PAIRS.size()+" euclidean number pairs! Safe: "+(PAIRS.size() - unsafe)+"    Unsafe: "+unsafe);
+		System.out
+				.println("Found " + PAIRS.size() + " euclidean number pairs!");
 	}
 
 	public static final class EuclideanNumberPair {
 
 		/**
-		 * The greatest common divisor, product, and quotient.
-		 * Product is used to encode values, where quotient is used to decode them.
-		 * GCD usually = product * quotient.
-		 * True value is the decoded value {@see <init>}
+		 * The greatest common divisor, product, and quotient. Product is used
+		 * to encode values, where quotient is used to decode them. GCD usually
+		 * = product * quotient. True value is the decoded value {@see <init>}
 		 */
 		private BigInteger product, quotient, gcd, trueValue;
 
 		/**
-		 * If the unsafe flag is flagged {@code true}, the gcd was not <1>.
-		 * This is a very bad thing.
+		 * If the unsafe flag is flagged {@code true}, the gcd was not <1>. This
+		 * is a very bad thing.
 		 */
 		private boolean unsafe;
 
 		/**
-		 * The amount of bits in this pair of numbers.
-		 * 32 = int, 64 = long
+		 * The amount of bits in this pair of numbers. 32 = int, 64 = long
 		 */
 		private int bits;
 
-		public EuclideanNumberPair(BigInteger product, BigInteger quotient, BigInteger gcd, int bits, boolean unsafe) {
+		public EuclideanNumberPair(BigInteger product, BigInteger quotient,
+				BigInteger gcd, int bits, boolean unsafe) {
 			this.product = product;
 			this.quotient = quotient;
 			this.gcd = gcd;
@@ -102,66 +97,112 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 	}
 
 	@Override
-	public synchronized void visitArithExpr(final ClassNode c, final MethodNode m, final ArithExpr expr) {
-		try {
-			if (expr.operation() == ArithExpr.MUL) {
-				boolean left = expr.left() instanceof ConstantExpr && !(expr.right() instanceof ConstantExpr);
-				boolean right = !(expr.left() instanceof ConstantExpr) && expr.right() instanceof ConstantExpr;
-				if (left || right) {
-
-					Expr oppSide = left ? expr.right() : expr.left();
-					ConstantExpr cst = (ConstantExpr) (left ? expr.left() : expr.right());
-
-					boolean isStaticOpp = oppSide instanceof StaticFieldExpr;
-					if (cst.type().isIntegral() && oppSide instanceof FieldExpr || isStaticOpp) {
-						Node parent = expr.parent();
-						
-						if (parent instanceof StoreExpr) {
-							MemExpr target = ((StoreExpr) parent).target();
-							if (!(target instanceof FieldExpr || target instanceof StaticFieldExpr)) {
-								return;
+	public synchronized void visitArithExpr(final ClassNode c,
+			final MethodNode m, final ArithExpr expr) {
+		if (expr.operation() == ArithExpr.MUL) {
+			boolean left = expr.left() instanceof ConstantExpr
+					&& !(expr.right() instanceof ConstantExpr);
+			boolean right = !(expr.left() instanceof ConstantExpr)
+					&& expr.right() instanceof ConstantExpr;
+			if (left || right) {
+				final Expr oppSide = left ? expr.right() : expr.left();
+				ConstantExpr cst = (ConstantExpr) (left ? expr.left()
+						: expr.right());
+				
+				final AtomicBoolean safe = new AtomicBoolean(true);
+				final AtomicReference<StoreExpr> store = new AtomicReference<StoreExpr>(null);
+				expr.stmt().visitChildren(new TreeVisitor() {
+					@Override
+					public void visitExpr(Expr expr) {
+						if(expr instanceof StoreExpr) {
+							if(store.get() != null) {
+								safe.set(false);
 							}
-						}
-						
-						boolean isLongCst = cst.value() instanceof Long;
-						if (isLongCst || cst.value() instanceof Integer) {
-							long val = isLongCst ? ((long) cst.value()) : (int) cst.value();
-							BigInteger quotient = BigInteger.valueOf(val);
-
-							if ((val & 1) == 0) {//Not invertible. (Even number)
-								return;
-							}
-
-							AtomicBoolean unsafe = new AtomicBoolean(false);
-
-							EuclideanNumberPair pair = decipher(quotient, isLongCst ? 64 : 32, unsafe);
-
-
-							MemberRef field =  isStaticOpp ? ((StaticFieldExpr) oppSide).field() : ((FieldExpr) oppSide).field();
-							EuclideanNumberPair prev = PAIRS.get(field);
-
-							if (prev != null) {
-								return;
-							}
-
-							PAIRS.put(field, pair);
+							store.set((StoreExpr) expr);
 						}
 					}
+				});
+				if(!safe.get()) {
+					return;
+				}
+				
+				FieldNode f1 = null;
+				if(store.get() != null) {
+					MemExpr target = store.get().target();
+					if(target instanceof FieldExpr) {
+						f1 = Deobfuscator.getApp().field(((FieldExpr) target).field());
+					} else if(target instanceof StaticFieldExpr) {
+						f1 = Deobfuscator.getApp().field(((StaticFieldExpr) target).field());
+					}
+				}
+				FieldNode f2 = null;
+				if(oppSide instanceof FieldExpr) {
+					f2 = Deobfuscator.getApp().field(((FieldExpr) oppSide).field());
+				} else if(oppSide instanceof StaticFieldExpr) {
+					f2 = Deobfuscator.getApp().field(((StaticFieldExpr) oppSide).field());
+				}
+				
+				if(store.get() != null && f2 != null && f1 != f2) {
+					return;
+				}
+				
+				final FieldNode f = f1 == null ? f2 : f1;
+				if(f == null) {
+					return;
+				}
+				
+				EuclideanNumberPair prev = PAIRS.get(f);
+				if (prev != null) {
+					return;
+				}
+				
+				expr.stmt().visitChildren(new TreeVisitor() {
+					@Override
+					public void visitExpr(Expr expr) {
+						FieldNode f3 = null;
+						if(expr instanceof FieldExpr) {
+							f3 = Deobfuscator.getApp().field(((FieldExpr) expr).field());
+						} else if(expr instanceof StaticFieldExpr) {
+							f3 = Deobfuscator.getApp().field(((StaticFieldExpr) expr).field());
+						}
+						
+						if(f3 != null && f3 != f) {
+							safe.set(false);
+						}
+					}
+				});
+				if(!safe.get()) {
+					return;
+				}
+
+				if (cst.value() instanceof Integer || cst.value() instanceof Long) {
+					long val = cst.value() instanceof Long ? ((long) cst.value()) : (int) cst.value();
+					
+					BigInteger quotient = BigInteger.valueOf(val);
+					if ((val & 1) == 0) {// Not invertible. (Even number)
+						return;
+					}
+					
+					EuclideanNumberPair p = decipher(quotient, cst.value() instanceof Long ? 64 : 32, store.get() != null);
+					PAIRS.put(f, p);
 				}
 			}
-		} catch (Exception e) {
-			e.printStackTrace();
 		}
 	}
 
-
 	/**
-	 * Deciphers the given quotient and returns a new {@link EuclideanNumberPair}.
-	 * @param quotient The quotient value.
-	 * @param unsafe The unsafe flag.
+	 * Deciphers the given quotient and returns a new
+	 * {@link EuclideanNumberPair}.
+	 * 
+	 * @param quotient
+	 *            The quotient value.
+	 * @param unsafe
+	 *            The unsafe flag.
 	 * @return a new {@link EuclideanNumberPair}.
 	 */
-	public static final EuclideanNumberPair decipher(BigInteger quotient, int bits, AtomicBoolean unsafe) {
+	public static final EuclideanNumberPair decipher(BigInteger quotient, int bits, boolean store) {
+		boolean unsafe = false;
+		
 		BigInteger product = inverse(quotient, bits);
 		BigInteger g = gcd(product, quotient);
 
@@ -171,18 +212,22 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 			long v2 = quotient.divide(g).multiply(product).longValue();
 
 			if (v1 != v2) {
-				unsafe.set(true);
+				unsafe = true;
 			}
 		}
 
-		return new EuclideanNumberPair(product, quotient, g, bits, unsafe.get());
+		if(!store)
+			return new EuclideanNumberPair(product, quotient, g, bits, unsafe);
+		else 
+			return new EuclideanNumberPair(quotient, product, g, bits, unsafe);
 
 	}
 
 	/**
-	 * Shifts the value given left, 32 bits
-	 * and inverses the value (^-1).
-	 * @param val The value to inverse.
+	 * Shifts the value given left, 32 bits and inverses the value (^-1).
+	 * 
+	 * @param val
+	 *            The value to inverse.
 	 */
 	public static BigInteger inverse(BigInteger val, int bits) {
 		BigInteger shift = BigInteger.ONE.shiftLeft(bits);
@@ -190,9 +235,10 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 	}
 
 	/**
-	 * Finds the greatest common divisor for
-	 * a set of BigIntegers.
-	 * @param given Must contain at least 2 values.
+	 * Finds the greatest common divisor for a set of BigIntegers.
+	 * 
+	 * @param given
+	 *            Must contain at least 2 values.
 	 */
 	public static BigInteger gcd(BigInteger... given) {
 		BigInteger g = given[0].gcd(given[1]);
@@ -201,5 +247,4 @@ public class EuclideanPairIdentifier extends TreeNodeVisitor {
 		}
 		return g;
 	}
-
 }

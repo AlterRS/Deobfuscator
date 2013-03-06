@@ -66,4 +66,20 @@ public class ClassNode {
 			method.accept(visitor);
 		}
 	}
+	
+	@Override
+	public boolean equals(Object object) {
+		if(object instanceof ClassNode) {
+			ClassNode n2 = (ClassNode) object;
+			if(n2.name().equals(name())) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	@Override
+	public int hashCode() {
+		return name().hashCode();
+	}
 }

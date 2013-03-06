@@ -30,11 +30,18 @@ import EDU.purdue.cs.bloat.tree.Node;
 import EDU.purdue.cs.bloat.tree.StaticFieldExpr;
 import EDU.purdue.cs.bloat.tree.StoreExpr;
 import EDU.purdue.cs.bloat.tree.TreeVisitor;
+import alterrs.deob.Deobfuscator;
 import alterrs.deob.trans.euclid.EuclideanPairIdentifier.EuclideanNumberPair;
 import alterrs.deob.tree.ClassNode;
 import alterrs.deob.tree.MethodNode;
 import alterrs.deob.util.TreeNodeVisitor;
 
+/**
+ * Removes the field multiplications.
+ * 
+ * @author Lazaro Brito
+ *
+ */
 public class EuclideanDeobfuscation extends TreeNodeVisitor {
 	private int simple = 0;
 	private int unfold = 0;
@@ -77,7 +84,7 @@ public class EuclideanDeobfuscation extends TreeNodeVisitor {
 					}
 				}
 			});
-			EuclideanNumberPair loadCodec = EuclideanPairIdentifier.PAIRS.get(atomicField.get());
+			EuclideanNumberPair loadCodec = atomicField.get() != null ? EuclideanPairIdentifier.PAIRS.get(Deobfuscator.getApp().field(atomicField.get())) : null;
 			
 			StoreExpr store = null;
 			Node n = expr;
@@ -91,9 +98,9 @@ public class EuclideanDeobfuscation extends TreeNodeVisitor {
 			if(store != null) {
 				MemExpr memExpr = store.target();
 				if(memExpr instanceof FieldExpr) {
-					storeCodec = EuclideanPairIdentifier.PAIRS.get(((FieldExpr) memExpr).field());
+					storeCodec = EuclideanPairIdentifier.PAIRS.get(Deobfuscator.getApp().field(((FieldExpr) memExpr).field()));
 				} else if(memExpr instanceof StaticFieldExpr) {
-					storeCodec = EuclideanPairIdentifier.PAIRS.get(((StaticFieldExpr) memExpr).field());
+					storeCodec = EuclideanPairIdentifier.PAIRS.get(Deobfuscator.getApp().field(((StaticFieldExpr) memExpr).field()));
 				}
 			}
 			
@@ -105,11 +112,11 @@ public class EuclideanDeobfuscation extends TreeNodeVisitor {
 		}
 	}
 	
-	public void decrypt(EuclideanNumberPair loadCodec, EuclideanNumberPair storeCodec, Expr expr, ConstantExpr constant, Expr other) {
+	public void decrypt(EuclideanNumberPair loadCodec, EuclideanNumberPair storeCodec, Expr expr, ConstantExpr constant, Expr other) {	
 		if(loadCodec == null && storeCodec == null) {
 			return;
 		}
-		
+
 		Number encodedValue = (Number) constant.value();
 		Number decodedValue;
 		boolean unsafe = false;
@@ -160,7 +167,7 @@ public class EuclideanDeobfuscation extends TreeNodeVisitor {
 			return;
 		}
 		if(expr.expr() instanceof ConstantExpr) {
-			EuclideanNumberPair codec = EuclideanPairIdentifier.PAIRS.get(field);
+			EuclideanNumberPair codec = EuclideanPairIdentifier.PAIRS.get(Deobfuscator.getApp().field(field));
 			if(codec != null) {
 				ConstantExpr constant = (ConstantExpr) expr.expr();
 				

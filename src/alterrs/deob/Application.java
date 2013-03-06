@@ -52,9 +52,27 @@ public class Application {
 
 		ClassInfo[] classInfos = loader.loadClassesFromZipFile(archive);
 		classes = new ClassNode[classInfos.length];
+
+		boolean removeNulls = false;
 		for (int i = 0; i < classes.length; i++) {
 			ClassInfo info = classInfos[i];
+			if (info == null) {
+				removeNulls = true;
+				continue;
+			}
+
 			classes[i] = new ClassNode(info, context.editClass(info));
+		}
+
+		if (removeNulls) {
+			ArrayList<ClassNode> classList = new ArrayList<ClassNode>();
+			for (ClassNode c : classes) {
+				if (c != null) {
+					classList.add(c);
+				}
+			}
+
+			classes = classList.toArray(new ClassNode[0]);
 		}
 	}
 
@@ -167,6 +185,7 @@ public class Application {
 	}
 
 	public FieldNode field(MemberRef ref) {
+		
 		for (ClassNode c : classes()) {
 			if (ref.declaringClass().equals(Type.getType("L" + c.name() + ";"))) {
 				for (FieldNode f : c.fields()) {
